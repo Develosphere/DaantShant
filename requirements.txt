@@ -1,0 +1,10 @@
+# Install from repo root:
+#   pip install -r requirements.txt -c constraints.txt
+#
+# If teeth-analyzer crashes on import (numpy/cv2), run:
+#   .\scripts\fix-numpy-opencv.ps1
+-c constraints.txt
+-e ./packages/dantshaant_common
+-e ./services/teeth_analyzer
+-e ./services/diagnosis
+-e ./orchestrator
