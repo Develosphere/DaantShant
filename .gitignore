@@ -18,3 +18,13 @@ apps/web/node_modules/
 apps/web/.next/
 *.pt
 *.safetensors
+*.pyc
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.coverage
+htmlcov/
+.tox/
+.cache/

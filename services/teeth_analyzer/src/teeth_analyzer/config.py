@@ -27,10 +27,12 @@ class Settings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8001
-    backend: str = "stub"  # stub | gemini
+    backend: str = "stub"  # stub | gemini | openrouter
     model_id: str = "stub-v0"
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
+    openrouter_api_key: str = ""
+    openrouter_model: str = "google/gemini-2.0-flash-exp:free"
     fallback_to_stub: bool = False
     reject_low_quality: bool = False
     quality_gate_threshold: float = 0.45

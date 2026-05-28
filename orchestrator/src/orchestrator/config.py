@@ -22,4 +22,22 @@ class Settings(BaseSettings):
     live_stable_frames_for_partial: int = 2
 
 
-settings = Settings()
+class MongoDBSettings(BaseSettings):
+    """MongoDB configuration - no prefix, reads directly from .env"""
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+    
+    mongodb_uri: str = "mongodb://localhost:27017"
+    mongodb_db: str = "dantshaant"
+
+
+# Merge MongoDB settings into main settings
+class CombinedSettings(Settings, MongoDBSettings):
+    pass
+
+
+settings = CombinedSettings()
+

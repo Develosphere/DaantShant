@@ -3,8 +3,10 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from uuid import UUID
 
 from orchestrator.config import settings
+from orchestrator.database import Database
 from orchestrator.live_session import handle_live_websocket
 from orchestrator.pipeline import (
     TeethAnalyzePipelineRequest,
@@ -12,18 +14,36 @@ from orchestrator.pipeline import (
     check_dependencies,
     run_teeth_analysis_pipeline,
 )
+from orchestrator.chat_schemas import (
+    CreateConversationRequest,
+    CreateConversationResponse,
+    ConversationHistoryResponse,
+    ConversationSummary,
+    SendMessageRequest,
+    SendMessageResponse,
+)
+from orchestrator.chat_service import (
+    create_conversation,
+    get_user_conversations,
+    get_conversation_messages,
+    send_message,
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.settings = settings
+    # Connect to MongoDB
+    await Database.connect()
     yield
+    # Disconnect from MongoDB
+    await Database.disconnect()
 
 
 app = FastAPI(
     title="DantShaant Orchestrator",
-    version="0.2.0",
-    description="Gateway — HTTP snapshot + WebSocket live video",
+    version="0.3.0",
+    description="Gateway — HTTP snapshot + WebSocket live video + Chat API",
     lifespan=lifespan,
 )
 
@@ -39,13 +59,24 @@ app.add_middleware(
 @app.get("/health")
 async def health() -> dict:
     deps = await check_dependencies()
+    
+    # Check MongoDB connection
+    try:
+        await Database.get_db().command("ping")
+        deps["mongodb"] = "ok"
+    except Exception:
+        deps["mongodb"] = "unreachable"
+    
     status = "ok" if all(v == "ok" for v in deps.values()) else "degraded"
     return {
         "status": status,
         "service": "orchestrator",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "dependencies": deps,
     }
+
+
+# --- Original Analysis Endpoints ---
 
 
 @app.post("/v1/teeth/analyze", response_model=TeethAnalyzePipelineResponse)
@@ -74,6 +105,49 @@ async def analyze_teeth(
 @app.websocket("/v1/live/session")
 async def live_session_ws(websocket: WebSocket) -> None:
     await handle_live_websocket(websocket)
+
+
+# --- Chat API Endpoints ---
+
+
+@app.post("/v1/chat/conversation", response_model=CreateConversationResponse)
+async def create_new_conversation(
+    request: CreateConversationRequest,
+) -> CreateConversationResponse:
+    """Create a new conversation."""
+    try:
+        return await create_conversation(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/v1/chat/conversations/{user_id}", response_model=list[ConversationSummary])
+async def list_user_conversations(user_id: UUID) -> list[ConversationSummary]:
+    """Get all conversations for a user."""
+    try:
+        return await get_user_conversations(user_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/v1/chat/messages/{conversation_id}", response_model=ConversationHistoryResponse)
+async def get_conversation_history(conversation_id: UUID) -> ConversationHistoryResponse:
+    """Get all messages in a conversation."""
+    try:
+        return await get_conversation_messages(conversation_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.post("/v1/chat/message", response_model=SendMessageResponse)
+async def send_chat_message(request: SendMessageRequest) -> SendMessageResponse:
+    """Send a message and get assistant response."""
+    try:
+        return await send_message(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 def run() -> None:
