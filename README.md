@@ -44,13 +44,13 @@ cd DaantShaant
 
 ```powershell
 # Create virtual environment
-python -m venv .venv
+uv venv
 
 # Activate virtual environment
-.\.venv\Scripts\Activate.ps1
+.venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt -c constraints.txt
+uv pip install -r requirements.txt -c constraints.txt
 ```
 
 ### 3. Setup MongoDB
