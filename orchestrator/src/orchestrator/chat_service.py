@@ -31,6 +31,7 @@ from orchestrator.pipeline import (
 )
 from orchestrator.intent_classifier import intent_classifier, UserIntent
 from orchestrator.conversation_engine import conversation_engine
+from orchestrator import conversation_state as cs
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ async def ensure_user_exists(user_id: UUID) -> UserDocument:
     # $setOnInsert only sets values if document is being inserted (not updated)
     user_data = {
         "_id": user_id,
-        "username": None,
+        "username": f"user_{user_id.hex}",
         "created_at": datetime.now(timezone.utc),
         "profile": {}
     }
@@ -212,18 +213,34 @@ async def get_recent_analysis_history(
 async def generate_conversational_response(
     user_text: str,
     intent: UserIntent,
+    conversation_id: Optional[UUID] = None,
     analysis_result: Optional[dict] = None,
     recent_messages: Optional[list[MessageDocument]] = None,
     previous_analyses: Optional[list[AnalysisHistoryDocument]] = None,
+    context_info: Optional[dict] = None,
 ) -> str:
     """Generate conversational assistant response using LLM."""
     
     recent_messages = recent_messages or []
     previous_analyses = previous_analyses or []
+    context_info = context_info or {}
+    conv_id = str(conversation_id) if conversation_id else None
     
-    logger.info(f"[CHAT] Generating response for intent={intent}, has_analysis={analysis_result is not None}")
+    logger.info(f"[CHAT] Generating response for intent={intent}, has_analysis={analysis_result is not None}, casual_address={context_info.get('has_casual_address', False)}")
     
     try:
+        # --- Priority routing for new intents ---
+        
+        # OFF_DOMAIN: deterministic redirect, no LLM call
+        if intent == UserIntent.OFF_DOMAIN:
+            return conversation_engine.generate_off_domain_response(user_text)
+        
+        # CORRECTION: deterministic response, no LLM call
+        if intent == UserIntent.CORRECTION:
+            return conversation_engine.generate_correction_response(user_text, conv_id or "")
+        
+        # --- Existing intent routing ---
+        
         if intent == UserIntent.GREETING:
             return await conversation_engine.generate_greeting()
         
@@ -236,16 +253,19 @@ async def generate_conversational_response(
                     previous_analyses
                 )
             else:
-                return "I'm ready to analyze your teeth image. Please share a clear photo."
+                return "I'm ready to check out your teeth. Send me a clear photo."
         
         elif intent == UserIntent.SYMPTOM_DISCUSSION:
             return await conversation_engine.generate_symptom_response(
                 user_text,
                 recent_messages,
-                previous_analyses
+                previous_analyses,
+                context_info,
+                conversation_id=conv_id
             )
         
         elif intent == UserIntent.COMPARE_HISTORY:
+            # Use the existing comparison method
             return await conversation_engine.generate_comparison_response(
                 user_text,
                 analysis_result,
@@ -255,31 +275,25 @@ async def generate_conversational_response(
         elif intent == UserIntent.FOLLOW_UP:
             return await conversation_engine.generate_follow_up_response(
                 user_text,
-                recent_messages
+                recent_messages,
+                conversation_id=conv_id
             )
         
-        elif intent == UserIntent.GENERAL_ORAL_QUESTION:
-            return await conversation_engine.generate_general_response(
+        else:  # GENERAL_ORAL_QUESTION or UNKNOWN
+            return await conversation_engine.generate_conversational_response(
                 user_text,
                 recent_messages,
-                previous_analyses
-            )
-        
-        else:  # UNKNOWN
-            return await conversation_engine.generate_general_response(
-                user_text,
-                recent_messages,
-                previous_analyses
+                previous_analyses,
+                context_info,
+                conversation_id=conv_id
             )
     
     except Exception as e:
         logger.error(f"[CHAT] Error generating conversational response: {e}", exc_info=True)
-        # Fallback response
-        return (
-            "I'm here to help with your oral health. "
-            "You can share a photo of your teeth for analysis, "
-            "or ask me any questions about dental care."
-        )
+        # Contextual recovery instead of generic fallback
+        if conv_id:
+            return cs.get_contextual_recovery(conv_id)
+        return "So what's going on with your teeth?"
 
 
 async def send_message(request: SendMessageRequest) -> SendMessageResponse:
@@ -327,9 +341,19 @@ async def send_message(request: SendMessageRequest) -> SendMessageResponse:
     await messages.insert_one(user_message.model_dump(by_alias=True, mode="json"))
     logger.info(f"[MONGO] Saved user message: {user_message.message_id}")
     
-    # Classify intent
-    intent = intent_classifier.classify(request.text, has_image=bool(request.image_base64))
-    logger.info(f"[CHAT] Classified intent: {intent}")
+    # Classify intent with enhanced context
+    is_first_message = len(recent_messages) == 0
+    intent, context_info = intent_classifier.classify(
+        request.text, 
+        has_image=bool(request.image_base64),
+        is_first_message=is_first_message
+    )
+    logger.info(f"[CHAT] Classified intent: {intent}, context: {context_info}")
+    
+    # --- UPDATE CONVERSATION STATE (before LLM generation) ---
+    conv_id_str = str(conversation_id)
+    state_changes = cs.update_from_message(conv_id_str, request.text, intent.value)
+    logger.info(f"[CHAT] State changes: {state_changes}")
     
     # Run analysis if image provided
     analysis_result = None
@@ -369,12 +393,15 @@ async def send_message(request: SendMessageRequest) -> SendMessageResponse:
     logger.info(f"[CHAT] Retrieved {len(previous_analyses)} previous analyses")
     
     # Generate assistant response using conversational engine
+    # Pass conversation_id for state-aware generation
     assistant_text = await generate_conversational_response(
         request.text,
         intent,
-        analysis_result,
-        recent_messages,
-        previous_analyses,
+        conversation_id=conversation_id,
+        analysis_result=analysis_result,
+        recent_messages=recent_messages,
+        previous_analyses=previous_analyses,
+        context_info=context_info,
     )
     
     # Save assistant message

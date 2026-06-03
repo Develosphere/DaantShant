@@ -157,7 +157,7 @@ flowchart LR
 
 ## Next engineering tasks
 
-1. Install deps: `pip install -r requirements.txt`
+1. Install deps: `uv pip install -r requirements.txt`
 2. Run `scripts/start-services.ps1` — verify `GET /health` on all three ports
 3. Test pipeline: `POST http://127.0.0.1:8000/v1/teeth/analyze` with sample base64 image
 4. Phase 1: optional Claude Vision backend behind Teeth Analyzer

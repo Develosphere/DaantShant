@@ -12,9 +12,9 @@ Follow this checklist to ensure everything is properly configured.
 ## ✅ Initial Setup
 
 - [ ] Clone repository
-- [ ] Create virtual environment (`.venv`)
+- [ ] Create virtual environment (`.venv`) using `uv venv`
 - [ ] Activate virtual environment
-- [ ] Install Python dependencies (`pip install -r requirements.txt -c constraints.txt`)
+- [ ] Install Python dependencies (`uv pip install -r requirements.txt -c constraints.txt`)
 - [ ] Copy `.env.example` to `.env`
 
 ## ✅ API Keys

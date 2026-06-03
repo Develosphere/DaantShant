@@ -119,8 +119,42 @@ class OpenRouterClient:
                     )
                     
                     if response.status_code == 200:
-                        data = response.json()
-                        content = data["choices"][0]["message"]["content"]
+                        try:
+                            data = response.json()
+                        except Exception as e:
+                            logger.error(f"[OPENROUTER] Failed to parse JSON response: {e}")
+                            last_error = RuntimeError(f"Malformed JSON response: {response.text}")
+                            continue
+                            
+                        if not isinstance(data, dict):
+                            logger.error(f"[OPENROUTER] Response is not a JSON object: {data}")
+                            last_error = RuntimeError("Response is not a JSON object")
+                            continue
+                            
+                        choices = data.get("choices")
+                        if not choices or not isinstance(choices, list) or len(choices) == 0:
+                            logger.error(f"[OPENROUTER] Empty or missing choices in response: {data}")
+                            last_error = RuntimeError("Empty choices list from OpenRouter")
+                            continue
+                            
+                        choice = choices[0]
+                        if not isinstance(choice, dict):
+                            logger.error(f"[OPENROUTER] Choice is not a dict: {choice}")
+                            last_error = RuntimeError("Choice is not a dict")
+                            continue
+                            
+                        message = choice.get("message")
+                        if not message or not isinstance(message, dict):
+                            logger.error(f"[OPENROUTER] Message missing or not a dict in choice: {choice}")
+                            last_error = RuntimeError("Message missing in choice")
+                            continue
+                            
+                        content = message.get("content")
+                        if content is None:
+                            logger.error(f"[OPENROUTER] Content is None in choices message: {message}")
+                            last_error = RuntimeError("Null content from OpenRouter")
+                            continue
+                        
                         logger.info(f"[OPENROUTER] Response generated successfully ({len(content)} chars)")
                         return content.strip()
                     else:
@@ -128,8 +162,8 @@ class OpenRouterClient:
                         logger.error(f"[OPENROUTER] {error_msg}")
                         last_error = RuntimeError(error_msg)
                         
-                        # Don't retry on client errors (4xx)
-                        if 400 <= response.status_code < 500:
+                        # Don't retry on client errors (4xx) except timeouts/rate limits
+                        if 400 <= response.status_code < 500 and response.status_code not in (408, 429):
                             raise last_error
                         
             except httpx.TimeoutException as e:
@@ -143,7 +177,7 @@ class OpenRouterClient:
             except Exception as e:
                 logger.error(f"[OPENROUTER] Unexpected error: {e}", exc_info=True)
                 last_error = RuntimeError(f"OpenRouter API error: {e}")
-                break  # Don't retry on unexpected errors
+                break  # Don't retry on unexpected programming errors
         
         # All retries failed
         logger.error(f"[OPENROUTER] Failed after {self.max_retries + 1} attempts")

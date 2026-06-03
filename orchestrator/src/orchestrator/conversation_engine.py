@@ -1,48 +1,71 @@
 """LLM-powered conversational engine for DaantShaant assistant."""
 
 import logging
-from typing import Optional
+import re
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 from orchestrator.chat_schemas import AnalysisHistoryDocument, MessageDocument
 from orchestrator.openrouter_client import openrouter_client
+from orchestrator.llm_provider import llm_provider
+from orchestrator.rag.retrieval_service import retrieval_service
+from orchestrator import conversation_state as cs
 
 logger = logging.getLogger(__name__)
 
 
-ASSISTANT_SYSTEM_PROMPT = """You are DaantShaant, a caring and knowledgeable oral health assistant.
+ASSISTANT_SYSTEM_PROMPT = """You are DaantShaant - a friendly, knowledgeable local dentist texting a patient or friend. You are chill, professional (70% professional, 30% friendly human), and you have a great memory.
 
-Your role:
-- Help users understand their oral health
-- Provide evidence-based dental care guidance
-- Analyze teeth images when provided
-- Answer questions about brushing, flossing, dental conditions, and oral hygiene
-- Encourage good dental habits
+Tone & Personality Rules:
+- Sound like a real person texting, not a chatbot. Use casual transitions like "Honestly", "Unfortunately", "Actually", "Usually".
+- Subtle dentist humor is great: "Your gums are basically protesting a bit 😅" or "That yellow hard stuff sounds like tartar honestly."
+- Use natural contractions (you're, it's, don't, can't). Avoid clinical/medical jargon unless simplified first.
+- NO markdown formatting ever. Output plain text only. No bold (**), no bullet points, no numbered lists, no headers (#). Use a natural single-paragraph flow or simple line breaks.
 
-Your personality:
-- Conversational and friendly, but professional
-- Caring without being overly emotional
-- Clear and educational
-- Ask relevant follow-up questions naturally
-- Reference previous context when useful
+ANSWER-FIRST RULE (MANDATORY — HIGHEST PRIORITY):
+- You MUST answer the user's question or address their concern FIRST, in the very first 1-3 sentences of your response.
+- If the user asks "Why do gums bleed?" — your FIRST sentence must explain WHY gums bleed. Do NOT start with a follow-up question like "Does it happen while brushing?".
+- If the user describes a symptom — your FIRST sentence must acknowledge and explain it. Give the cause, explanation, or advice BEFORE asking anything.
+- Follow-up questions are ONLY allowed AFTER you have fully answered. They go at the END of your message, never at the beginning.
+- NEVER start your response with a question. NEVER respond to a factual dental query with only a question.
+- Example of CORRECT behavior: User says "Why do gums bleed?" → You say "Gums usually bleed because plaque builds up near the gumline and irritates the tissue..." then optionally ask a clarifying question at the end.
+- Example of WRONG behavior: User says "Why do gums bleed?" → You say "Does it happen while brushing?" — this is FORBIDDEN.
 
-Important boundaries:
-- You are an AWARENESS TOOL, not a medical diagnosis system
-- Never claim diagnostic certainty
-- Always recommend consulting a licensed dentist for professional evaluation
-- Do not provide treatment plans or prescribe medications
-- Stay focused on oral health topics
-- Politely redirect off-topic conversations
+No Repetitive Patterns & Opening Variation:
+- DO NOT start consecutive or multi-turn messages with templated phrases like: "Oh no", "That sounds rough", "Yeah that can happen", "I see", "Usually it's because".
+- VARY your openers! Start directly with the topic or advice. For example: "Honestly, that yellow stuff is...", "Actually, sensitivity is super common...", "Warm saltwater rinses will...", "If your teeth are aching...".
+- Keep your conversational openings extremely diverse and direct.
 
-Communication style:
-- Use simple, clear language
-- Break complex topics into digestible points
-- Provide actionable advice when appropriate
-- Be encouraging about improvements
-- Show empathy for concerns or symptoms
+RAG Naturalization (Invisible Knowledge):
+- Synthesize, simplify, and conversationalize all dental knowledge. Never sound like you copied an article.
+- NEVER cite organizations, dentistry boards (like "ADA" or "American Dental Association"), journals, or scientific studies.
+- Speak entirely from your own expert perspective as their friendly dentist. Translate terms like "gingivitis" or "dental calculus" into "irritated gums" or "hardened plaque (tartar)". Keep it simple and practical!
 
-Always end responses about potential issues with: "For a professional evaluation, please consult your dentist."
+Dentist Recommendations:
+- Suggest a dentist visit naturally and only when it's really needed (e.g., severe pain, swelling, infection, hard tartar, deep cavities). Don't paste clinical disclaimers at the end of every message.
 """
+
+
+# Phrases the LLM should never output — caught in post-processing
+BANNED_PHRASES = [
+    r"what would you like to know",
+    r"how may i assist",
+    r"how can i assist",
+    r"feel free to ask",
+    r"i'm here to help",
+    r"i am here to help",
+    r"don't hesitate to ask",
+    r"let me know if you have",
+    r"is there anything else",
+    r"how can i help you today",
+    r"what can i help you with",
+    r"i'd be happy to help",
+    r"i can certainly help",
+    r"as an ai",
+    r"can you tell me more",
+    r"could you describe",
+    r"could you tell me",
+]
 
 
 class ConversationEngine:
@@ -50,313 +73,571 @@ class ConversationEngine:
     
     def __init__(self):
         self.client = openrouter_client
+        self.llm = llm_provider
+    def _is_incomplete(self, text: str) -> bool:
+        """Check if a text represents an incomplete, truncated, or dangling response."""
+        if not text:
+            return False
+        text = text.strip()
+        
+        # 1. Basic check: typical sentence ending punctuation or common friendly emojis
+        valid_endings = ('.', '!', '?', '"', ')', '😅', '🦷', '😊', '👍', '😉', '👌', 'side', 'day', 'week')
+        if not text.endswith(valid_endings):
+            return True
+
+        # 2. Check for hanging conjunctions/prepositions/contraction auxiliaries at the very end
+        words = text.split()
+        if words:
+            last_word = words[-1].lower().strip(".,!?\"'()😅🦷😊👍😉👌")
+            hanging_words = {
+                "and", "but", "if", "because", "so", "or", "with", "for", "at", 
+                "by", "to", "then", "they'll", "i'm", "you're", "it's", "we've", "who", "which", "than",
+                "about", "like", "just", "probably", "maybe", "should", "would", "could", "will", "can", "from"
+            }
+            if last_word in hanging_words:
+                return True
+
+        # 3. Check for dangling future promises, unfinished explanations, or incomplete semantic clauses
+        # E.g., "They'll...", "You should probably...", "If that continues...", "Because...", "Make sure to..."
+        dangling_patterns = [
+            r'\b(they\'ll|you\s+should|you\s+probably|if\s+that|make\s+sure|so\s+if|because|we\s+will|you\s+can|you\'ll|it\s+will|you\s+need|try\s+to|it\'s\s+best\s+to|should\s+probably|if\s+it|when\s+you|seems\s+like|make\s+sure\s+you|would\s+be|could\s+be|you\s+might\s+want\s+to)\s*$',
+            r'\b(and|but|if|because|so|or|with|for|at|by|to|then|who|which|than|about|like|just|probably|maybe|should|would|could|will|can|from)\s*$',
+            r'\b(if\s+that\s+continues|if\s+this\s+keeps\s+up|if\s+it\s+hurts|if\s+the\s+pain)\s*$'
+        ]
+        text_lower = text.lower().strip(".,!?\"'()😅🦷😊👍😉👌")
+        for pattern in dangling_patterns:
+            if re.search(pattern, text_lower):
+                return True
+                
+        return False
+
+    async def _try_complete_response(self, system_prompt: str, user_message: str, partial_response: str) -> str:
+        """Attempt to complete an abruptly ended response using a fast OpenRouter call, falling back to trimming."""
+        if not partial_response:
+            return partial_response
+            
+        partial_response = partial_response.strip()
+        if not self._is_incomplete(partial_response):
+            return partial_response
+            
+        logger.info(f"[ENGINE] Detected incomplete response: '{partial_response[-35:]}'. Attempting tail completion.")
+        
+        # Fast continuation prompt
+        continuation_prompt = f"""The assistant was replying to this message: "{user_message}"
+The assistant generated this partial response: "{partial_response}"
+
+Finish the final sentence naturally and completely. Do not repeat what was already written. Respond with ONLY the missing tail part to make it a complete sentence. Output plain text only."""
+        
+        try:
+            tail = await self.llm.generate(
+                system_prompt="You complete half-finished sentences from another assistant. Output only the completion. No repeating. Keep it extremely brief.",
+                user_message=continuation_prompt,
+                temperature=0.5,
+                max_tokens=60,
+                user_raw_message="",
+            )
+            tail = tail.strip()
+            # Clean tail of prefix markers if any
+            if ":" in tail and any(tail.lower().startswith(p) for p in ["completion:", "tail:", "reply:", "response:"]):
+                tail = tail.split(":", 1)[1].strip()
+                
+            combined = f"{partial_response} {tail}"
+            combined = re.sub(r'\s+', ' ', combined).strip()
+            
+            if not self._is_incomplete(combined):
+                logger.info(f"[ENGINE] Successfully completed response: '{combined[-35:]}'")
+                return combined
+        except Exception as e:
+            logger.warning(f"[ENGINE] Failed to complete response via API: {e}")
+            
+        # Fallback: Trim back to the last punctuation mark (making sure we don't trim to another incomplete state)
+        logger.info("[ENGINE] Falling back to sentence trimming for completion.")
+        current_trimmed = partial_response
+        for _ in range(3):  # up to 3 passes of trimming to avoid trailing dangling markers
+            last_punc = -1
+            for i in range(len(current_trimmed) - 1, -1, -1):
+                if current_trimmed[i] in ('.', '!', '?'):
+                    last_punc = i
+                    break
+                    
+            if last_punc != -1:
+                candidate = current_trimmed[:last_punc + 1].strip()
+                if len(candidate) > 15 and not self._is_incomplete(candidate):
+                    return candidate
+                current_trimmed = current_trimmed[:last_punc].strip()  # step past this punctuation mark and keep looking back
+            else:
+                break
+                
+        return partial_response
     
-    def _build_context(
-        self,
-        recent_messages: list[MessageDocument],
-        previous_analyses: Optional[list[AnalysisHistoryDocument]] = None
-    ) -> str:
-        """Build context string from conversation history."""
-        context_parts = []
+    def _build_conversation_memory(self, recent_messages: List[MessageDocument]) -> str:
+        """Build conversational memory with priority on recent context."""
+        if not recent_messages:
+            return "No previous conversation."
         
-        # Add recent conversation
-        if recent_messages:
-            context_parts.append("Recent conversation:")
-            for msg in recent_messages[-5:]:  # Last 5 messages
-                sender = "User" if msg.sender == "user" else "You"
-                # Truncate long messages
-                text = msg.text[:200] + "..." if len(msg.text) > 200 else msg.text
-                context_parts.append(f"{sender}: {text}")
+        # Priority: Last 6 messages (3 exchanges) for active context
+        memory_parts = []
+        for msg in recent_messages[-6:]:
+            sender = "User" if msg.sender == "user" else "You"
+            # Keep full context for recent messages
+            text = msg.text[:200] + "..." if len(msg.text) > 200 else msg.text
+            memory_parts.append(f"{sender}: {text}")
         
-        # Add previous analysis summary
-        if previous_analyses:
-            context_parts.append("\nPrevious analysis history:")
-            for analysis in previous_analyses[:3]:  # Last 3 analyses
-                date = analysis.created_at.strftime("%B %d")
-                context_parts.append(
-                    f"- {date}: {analysis.condition_label} (severity: {analysis.severity})"
-                )
-        
-        return "\n".join(context_parts) if context_parts else "No previous context."
+        return "Recent conversation:\n" + "\n".join(memory_parts)
     
-    def _build_conversation_context(
-        self,
-        recent_messages: list[MessageDocument]
-    ) -> list[dict]:
-        """Build conversation context for OpenRouter API."""
-        context = []
-        for msg in recent_messages[-6:]:  # Last 6 messages (3 exchanges)
-            role = "user" if msg.sender == "user" else "assistant"
-            # Truncate very long messages
-            content = msg.text[:500] + "..." if len(msg.text) > 500 else msg.text
-            context.append({"role": role, "content": content})
-        return context
+    def _clean_response(self, response: str) -> str:
+        """Clean response to remove markdown, generic phrases, and improve formatting."""
+        if not response:
+            return None
+            
+        # Remove markdown bold
+        response = re.sub(r'\*\*([^*]+)\*\*', r'\1', response)
+        
+        # Remove markdown italics
+        response = re.sub(r'\*([^*]+)\*', r'\1', response)
+        
+        # Remove markdown headers
+        response = re.sub(r'^#+\s+', '', response, flags=re.MULTILINE)
+        
+        # Remove bullet points
+        response = re.sub(r'^\s*[-*•]\s+', '', response, flags=re.MULTILINE)
+        
+        # Remove numbered lists (1. 2. 3.)
+        response = re.sub(r'^\s*\d+\.\s+', '', response, flags=re.MULTILINE)
+        
+        # Collapse excessive spacing
+        response = re.sub(r'\n{3,}', '\n\n', response)
+        response = re.sub(r' {2,}', ' ', response)
+        
+        # Strip banned generic phrases
+        for phrase in BANNED_PHRASES:
+            response = re.sub(phrase + r'[^.!?]*[.!?]?', '', response, flags=re.IGNORECASE)
+        
+        # Trim and clean
+        response = response.strip()
+        
+        # Remove duplicate disclaimers
+        if response.count("dentist") > 2:
+            lines = response.split('\n')
+            dentist_lines = [i for i, line in enumerate(lines) if "dentist" in line.lower()]
+            if len(dentist_lines) > 1:
+                for idx in dentist_lines[:-1]:
+                    lines[idx] = ""
+                response = '\n'.join([line for line in lines if line])
+        
+        # Final safety: if response is empty after cleaning, don't return blank
+        if not response.strip():
+            return None  # Signal caller to use contextual recovery
+        
+        return response
+    
+    def _needs_dentist_recommendation(self, user_message: str, context: Dict[str, Any]) -> bool:
+        """Determine if dentist recommendation is needed."""
+        serious_indicators = [
+            'severe pain', 'swelling', 'swollen', 'infection', 'pus',
+            'loose tooth', 'broken tooth', 'trauma', 'accident',
+            'persistent bleeding', 'won\'t stop bleeding', 'bleeding for days'
+        ]
+        
+        message_lower = user_message.lower()
+        return any(indicator in message_lower for indicator in serious_indicators)
     
     async def generate_greeting(self) -> str:
-        """Generate greeting response."""
+        """Generate a brief, natural greeting."""
         logger.info("[LLM] Generating greeting")
-        try:
-            prompt = "The user greeted you. Respond warmly and briefly introduce what you can help with. Keep it conversational and inviting. Mention you can analyze teeth photos and answer oral health questions."
-            
-            response = await self.client.generate_chat_response(
-                system_prompt=ASSISTANT_SYSTEM_PROMPT,
-                user_message=prompt,
-                temperature=0.7,
-                max_tokens=200
-            )
-            logger.info("[LLM] Greeting generated successfully")
-            return response
-        except Exception as e:
-            logger.error(f"[LLM] Greeting generation failed: {e}")
-            return (
-                "Hello! I'm DaantShaant, your oral health assistant. "
-                "I can help answer questions about dental care and analyze photos of your teeth. "
-                "How can I help you today?"
-            )
+        prompt = "User just greeted you. Respond naturally in 1-2 sentences. Be friendly and casual. Don't introduce yourself or list what you can do."
+        
+        response = await self.llm.generate(
+            system_prompt=ASSISTANT_SYSTEM_PROMPT,
+            user_message=prompt,
+            temperature=0.9,
+            max_tokens=80,
+            user_raw_message="hello",
+        )
+        logger.info("[LLM] Greeting generated successfully")
+        cleaned = self._clean_response(response)
+        if cleaned:
+            cleaned = await self._try_complete_response(ASSISTANT_SYSTEM_PROMPT, prompt, cleaned)
+        return cleaned or "Hey! What's going on?"
     
-    async def generate_general_response(
+    def generate_off_domain_response(self, user_message: str) -> str:
+        """Generate polite redirect for non-dental medical questions.
+        
+        Deterministic — no LLM call needed. Saves tokens.
+        """
+        logger.info("[ENGINE] Generating off-domain redirect (no LLM)")
+        
+        responses = [
+            "That sounds rough 😅 but I mainly focus on teeth and oral health. A doctor would be better for that one.",
+            "Oof, that doesn't sound fun. I'm really only good with dental stuff though — you'd want a doctor for that.",
+            "I wish I could help with that but I'm strictly a teeth person 😅 Definitely worth checking with a doctor though.",
+        ]
+        
+        # Simple rotation based on message length for variety
+        idx = len(user_message) % len(responses)
+        return responses[idx]
+    
+    def generate_correction_response(self, user_message: str, conversation_id: str) -> str:
+        """Generate response acknowledging a correction.
+        
+        Deterministic — no LLM call. Uses state to re-anchor the conversation.
+        """
+        logger.info("[ENGINE] Generating correction response (no LLM)")
+        
+        state = cs.get_state(str(conversation_id))
+        
+        if state.active_dental_issue:
+            issue = state.active_dental_issue
+            responses = {
+                "toothache": f"Ah got you 😅 So your tooth is hurting. Does it ache constantly or mainly while eating?",
+                "bleeding gums": f"Oh my bad 😅 So your gums are bleeding. Does it happen mainly while brushing or randomly?",
+                "sensitivity": f"Got it, sorry about that 😅 So your teeth are sensitive. Is it more with cold stuff or hot?",
+                "tartar/plaque buildup": f"Ah okay 😅 So you're the one with the buildup. Is the yellow stuff hard or more like a film?",
+                "discolored teeth": f"My bad 😅 So your teeth are looking yellow. Has it been like that for a while or is it recent?",
+                "cavity/tooth decay": f"Got it 😅 So you're dealing with the cavity situation. Any pain or just visible?",
+                "swollen gums": f"Oh okay 😅 So your gums are swollen. Any pain or bleeding along with it?",
+                "gum pain": f"Ah right 😅 So your gums are hurting. Does it feel sore all the time or mainly when eating?",
+            }
+            return responses.get(issue, f"Ah got you 😅 So you're the one dealing with {issue}. Tell me more about what's going on.")
+        
+        return "Oh my bad 😅 Got it, we're talking about you. So what's been going on with your teeth?"
+    
+    async def generate_conversational_response(
         self,
         user_message: str,
-        recent_messages: list[MessageDocument],
-        previous_analyses: Optional[list[AnalysisHistoryDocument]] = None
+        recent_messages: List[MessageDocument],
+        previous_analyses: Optional[List[AnalysisHistoryDocument]] = None,
+        context_info: Optional[Dict[str, Any]] = None,
+        conversation_id: Optional[str] = None
     ) -> str:
-        """Generate response to general oral health question."""
-        logger.info("[LLM] Generating general response")
-        context_str = self._build_context(recent_messages, previous_analyses)
-        conversation_context = self._build_conversation_context(recent_messages)
+        """Generate natural conversational response."""
+        logger.info("[LLM] Generating conversational response")
         
-        prompt = f"""The user asked an oral health question. Provide a helpful, evidence-based answer.
-Be conversational and educational. If relevant, ask a follow-up question to better understand their situation.
-
-User's question: {user_message}
-
-Context: {context_str}"""
+        # Build conversation memory with priority on recent context
+        conversation_memory = self._build_conversation_memory(recent_messages)
         
-        try:
-            response = await self.client.generate_chat_response(
-                system_prompt=ASSISTANT_SYSTEM_PROMPT,
-                user_message=prompt,
-                conversation_context=conversation_context,
-                temperature=0.7,
-                max_tokens=500
-            )
-            logger.info("[LLM] General response generated successfully")
-            return response
-        except Exception as e:
-            logger.error(f"[LLM] General response generation failed: {e}")
-            return (
-                "I'm here to help with your oral health questions. "
-                "Could you provide more details about what you'd like to know? "
-                "I can discuss brushing techniques, dental conditions, or analyze photos of your teeth."
-            )
+        # Get compact state context (priority over everything else)
+        state_context = ""
+        if conversation_id:
+            state_context = cs.get_context_summary(str(conversation_id))
+        
+        # Handle casual address naturally
+        display_message = user_message
+        if context_info and context_info.get("has_casual_address"):
+            display_message = context_info.get("cleaned_text", user_message)
+        
+        # Check if user is asking for summary
+        is_summary_request = any(word in user_message.lower() for word in ["summarize", "summary", "sum up", "recap", "tldr"])
+        
+        if is_summary_request:
+            prompt = f"""The user asked you to summarize. Summarize YOUR CONVERSATION with them in 2-3 sentences. Focus on what THEY told you and what YOU advised.
+
+{conversation_memory}
+
+{state_context}
+
+Summarize the conversation naturally and concisely. Don't give generic dental advice."""
+        else:
+            # Build prompt with state context at TOP (highest priority)
+            prompt = f"""The user said: "{user_message}"
+
+{state_context}
+
+{conversation_memory}
+
+IMPORTANT: Answer the user's question or address their concern FIRST in your opening sentences. Do NOT start with a follow-up question.
+Respond naturally in 2-4 sentences. Stay on the active topic. Reference what they told you before. If they ask a vague follow-up, answer directly using the active issue."""
+        
+        # Enhance with RAG only if not a summary request
+        if not is_summary_request:
+            try:
+                enhanced_prompt = await retrieval_service.get_enhanced_prompt(
+                    display_message, prompt, conversation_id
+                )
+                logger.info("[RAG] Enhanced prompt with context")
+            except Exception as e:
+                logger.warning(f"[RAG] Failed to enhance prompt: {e}")
+                enhanced_prompt = prompt
+        else:
+            enhanced_prompt = prompt
+        
+        # Get active issue for deterministic fallback
+        active_issue = None
+        if conversation_id:
+            state = cs.get_state(str(conversation_id))
+            active_issue = state.active_dental_issue
+        
+        # Generate response via multi-provider chain
+        response = await self.llm.generate(
+            system_prompt=ASSISTANT_SYSTEM_PROMPT,
+            user_message=enhanced_prompt,
+            temperature=0.8,
+            max_tokens=300,
+            user_raw_message=user_message,
+            active_issue=active_issue,
+        )
+        
+        # Clean response
+        response = self._clean_response(response) or response
+        
+        # Ensure completeness
+        if self._is_incomplete(response):
+            response = await self._try_complete_response(ASSISTANT_SYSTEM_PROMPT, enhanced_prompt, response)
+        
+        # Add dentist recommendation only if needed
+        if self._needs_dentist_recommendation(user_message, {}):
+            if "dentist" not in response.lower():
+                response += "\n\nThis sounds like something worth getting checked out by a dentist."
+        
+        logger.info("[LLM] Conversational response generated successfully")
+        return response
     
     async def generate_symptom_response(
         self,
         user_message: str,
-        recent_messages: list[MessageDocument],
-        previous_analyses: Optional[list[AnalysisHistoryDocument]] = None
+        recent_messages: List[MessageDocument],
+        previous_analyses: Optional[List[AnalysisHistoryDocument]] = None,
+        context_info: Optional[Dict[str, Any]] = None,
+        conversation_id: Optional[str] = None
     ) -> str:
-        """Generate response to symptom discussion."""
+        """Generate empathetic response to symptoms."""
         logger.info("[LLM] Generating symptom response")
-        context_str = self._build_context(recent_messages, previous_analyses)
-        conversation_context = self._build_conversation_context(recent_messages)
         
-        prompt = f"""The user is describing symptoms or concerns about their oral health.
-Acknowledge their concern with empathy. Provide general guidance about what might cause such symptoms.
-Recommend seeing a dentist for proper evaluation. Ask clarifying questions if helpful.
-
-User's message: {user_message}
-
-Context: {context_str}"""
+        conversation_memory = self._build_conversation_memory(recent_messages)
         
+        # Get compact state context
+        state_context = ""
+        active_issue = None
+        if conversation_id:
+            state_context = cs.get_context_summary(str(conversation_id))
+            state = cs.get_state(str(conversation_id))
+            active_issue = state.active_dental_issue
+        
+        # Handle casual address
+        display_message = user_message
+        if context_info and context_info.get("has_casual_address"):
+            display_message = context_info.get("cleaned_text", user_message)
+        
+        prompt = f"""The user is describing a symptom: "{user_message}"
+
+{state_context}
+
+{conversation_memory}
+
+CRITICAL: Your FIRST 1-3 sentences MUST explain what causes this symptom and give practical advice. Do NOT start with a follow-up question.
+After your explanation, you may optionally ask ONE brief follow-up question at the end if it would help you give better advice.
+Respond with empathy in 3-5 sentences. Be conversational and supportive. Plain text only."""
+        
+        # Enhance with RAG context (lowest priority)
         try:
-            response = await self.client.generate_chat_response(
-                system_prompt=ASSISTANT_SYSTEM_PROMPT,
-                user_message=prompt,
-                conversation_context=conversation_context,
-                temperature=0.7,
-                max_tokens=500
+            enhanced_prompt = await retrieval_service.get_enhanced_prompt(
+                display_message, prompt, conversation_id
             )
-            logger.info("[LLM] Symptom response generated successfully")
-            return response
         except Exception as e:
-            logger.error(f"[LLM] Symptom response generation failed: {e}")
-            return (
-                "I understand you're experiencing some discomfort. "
-                "While I can provide general information, symptoms like these should be evaluated by a dentist. "
-                "They can properly diagnose the issue and recommend appropriate treatment. "
-                "In the meantime, maintain gentle oral hygiene and avoid irritating the affected area."
-            )
+            logger.warning(f"[RAG] Failed to enhance prompt: {e}")
+            enhanced_prompt = prompt
+        
+        # Generate via multi-provider chain
+        response = await self.llm.generate(
+            system_prompt=ASSISTANT_SYSTEM_PROMPT,
+            user_message=enhanced_prompt,
+            temperature=0.8,
+            max_tokens=400,
+            user_raw_message=user_message,
+            active_issue=active_issue,
+        )
+        
+        # Clean response
+        response = self._clean_response(response) or response
+        
+        # Ensure completeness
+        if self._is_incomplete(response):
+            response = await self._try_complete_response(ASSISTANT_SYSTEM_PROMPT, enhanced_prompt, response)
+        
+        # Add dentist recommendation for serious symptoms
+        if self._needs_dentist_recommendation(user_message, {}):
+            if "dentist" not in response.lower():
+                response += "\n\nThis sounds like something you should have a dentist check out."
+        
+        logger.info("[LLM] Symptom response generated successfully")
+        return response
     
     async def generate_analysis_response(
         self,
         user_message: str,
         analysis_result: dict,
-        recent_messages: list[MessageDocument],
-        previous_analyses: Optional[list[AnalysisHistoryDocument]] = None
+        recent_messages: List[MessageDocument],
+        previous_analyses: Optional[List[AnalysisHistoryDocument]] = None
     ) -> str:
         """Generate conversational response for image analysis."""
         logger.info("[LLM] Generating analysis response")
+        
         diagnosis = analysis_result.get("diagnosis", {})
         condition = diagnosis.get("condition_label", "Unknown")
         severity = diagnosis.get("severity", "unknown")
         confidence = diagnosis.get("confidence", 0.0)
-        findings = analysis_result.get("analysis", {}).get("findings", [])
         
-        findings_text = ", ".join([f["label"] for f in findings]) if findings else "none"
-        context_str = self._build_context(recent_messages, previous_analyses)
-        conversation_context = self._build_conversation_context(recent_messages)
+        conversation_memory = self._build_conversation_memory(recent_messages)
         
-        prompt = f"""The user shared a teeth image for analysis. You've analyzed it and found:
+        prompt = f"""The user shared a photo of their teeth. You analyzed it and found:
+- Condition: {condition}
+- Severity: {severity}  
+- Confidence: {confidence:.0%}
 
-Condition: {condition}
-Severity: {severity}
-Confidence: {confidence:.0%}
-Findings: {findings_text}
+{conversation_memory}
 
-Provide a conversational explanation of what you observed. Be clear but not alarming.
-Explain what the findings mean in simple terms. Provide actionable advice for improvement.
-If severity is concerning, recommend dental consultation.
-
-User's message: {user_message or "Please analyze this image"}
-
-Context: {context_str}"""
+Explain what you see in 4-6 sentences. Be conversational and honest but not alarming. Give practical advice. Keep it natural. Plain text only."""
         
-        try:
-            response = await self.client.generate_chat_response(
-                system_prompt=ASSISTANT_SYSTEM_PROMPT,
-                user_message=prompt,
-                conversation_context=conversation_context,
-                temperature=0.7,
-                max_tokens=600
-            )
-            
-            # Ensure disclaimer is present
-            if "awareness tool" not in response.lower() and "not a medical diagnosis" not in response.lower():
-                response += (
-                    "\n\n*Please note: This is an awareness tool, not a medical diagnosis. "
-                    "Always consult a licensed dentist for professional evaluation.*"
-                )
-            
-            logger.info("[LLM] Analysis response generated successfully")
-            return response
-        except Exception as e:
-            logger.error(f"[LLM] Analysis response generation failed: {e}")
-            return self._fallback_analysis_response(condition, severity, findings_text)
+        response = await self.llm.generate(
+            system_prompt=ASSISTANT_SYSTEM_PROMPT,
+            user_message=prompt,
+            temperature=0.8,
+            max_tokens=400,
+            user_raw_message=user_message,
+        )
+        
+        # Clean response
+        response = self._clean_response(response) or response
+        
+        # Ensure completeness
+        if self._is_incomplete(response):
+            response = await self._try_complete_response(ASSISTANT_SYSTEM_PROMPT, prompt, response)
+        
+        if not response or len(response.strip()) < 10:
+            response = self._fallback_analysis_response(condition, severity)
+        
+        # Add disclaimer for analysis
+        if "analysis" not in response.lower() and "tool" not in response.lower():
+            response += "\n\n*This is just an analysis tool - for a proper diagnosis, you'd want to see a dentist.*"
+        
+        logger.info("[LLM] Analysis response generated successfully")
+        return response
     
     async def generate_follow_up_response(
         self,
         user_message: str,
-        recent_messages: list[MessageDocument]
+        recent_messages: List[MessageDocument],
+        conversation_id: Optional[str] = None
     ) -> str:
-        """Generate response to follow-up message."""
+        """Generate natural follow-up response with active issue context."""
         logger.info("[LLM] Generating follow-up response")
-        context_str = self._build_context(recent_messages)
-        conversation_context = self._build_conversation_context(recent_messages)
         
-        prompt = f"""The user sent a brief follow-up message. Consider the conversation context and respond naturally.
-
-User's message: {user_message}
-
-Recent conversation: {context_str}"""
+        conversation_memory = self._build_conversation_memory(recent_messages)
         
-        try:
-            response = await self.client.generate_chat_response(
-                system_prompt=ASSISTANT_SYSTEM_PROMPT,
-                user_message=prompt,
-                conversation_context=conversation_context,
-                temperature=0.7,
-                max_tokens=300
-            )
-            logger.info("[LLM] Follow-up response generated successfully")
-            return response
-        except Exception as e:
-            logger.error(f"[LLM] Follow-up response generation failed: {e}")
-            return "I'm here to help. What else would you like to know about your oral health?"
-    
+        # Get state context — critical for follow-ups
+        state_context = ""
+        resolved_issue = None
+        if conversation_id:
+            state = cs.get_state(str(conversation_id))
+            state_context = cs.get_context_summary(str(conversation_id))
+            resolved_issue = cs.resolve_follow_up(user_message, state)
+        
+        # Build a more targeted prompt for follow-ups
+        if resolved_issue:
+            prompt = f"""The user sent a follow-up message: "{user_message}"
+
+This is about their {resolved_issue} that they mentioned earlier.
+
+{state_context}
+
+{conversation_memory}
+
+Respond naturally in 2-4 sentences. Connect your answer directly to their {resolved_issue}. Be practical and conversational. Plain text only."""
+        else:
+            prompt = f"""The user sent a brief message: "{user_message}"
+
+{state_context}
+
+{conversation_memory}
+
+Respond naturally in 1-3 sentences based on the conversation context. Remember what you were just talking about. Plain text only."""
+        
+        # Get active issue for fallback
+        active_issue = None
+        if conversation_id:
+            active_issue = state.active_dental_issue if hasattr(state, 'active_dental_issue') else None
+        
+        response = await self.llm.generate(
+            system_prompt=ASSISTANT_SYSTEM_PROMPT,
+            user_message=prompt,
+            temperature=0.8,
+            max_tokens=300,
+            user_raw_message=user_message,
+            active_issue=active_issue or resolved_issue,
+        )
+        
+        cleaned = self._clean_response(response) or response
+        
+        # Ensure completeness
+        if self._is_incomplete(cleaned):
+            cleaned = await self._try_complete_response(ASSISTANT_SYSTEM_PROMPT, prompt, cleaned)
+        
+        logger.info("[LLM] Follow-up response generated successfully")
+        return cleaned
+
     async def generate_comparison_response(
         self,
         user_message: str,
-        current_analysis: Optional[dict],
-        previous_analyses: list[AnalysisHistoryDocument]
+        analysis_result: Optional[dict],
+        previous_analyses: Optional[List[AnalysisHistoryDocument]]
     ) -> str:
-        """Generate response comparing current and previous analyses."""
+        """Generate a response comparing current teeth photo findings with history."""
         logger.info("[LLM] Generating comparison response")
+        
         if not previous_analyses:
-            return (
-                "I don't have any previous analysis to compare with yet. "
-                "Share another photo in the future, and I'll be able to track your progress!"
-            )
+            return "I don't have any previous dental photos in your history to compare this with yet! Try sending a picture first so we have a starting point."
         
-        current_findings = "No current analysis"
-        if current_analysis:
-            diagnosis = current_analysis.get("diagnosis", {})
-            current_findings = f"{diagnosis.get('condition_label', 'Unknown')} (severity: {diagnosis.get('severity', 'unknown')})"
+        # Sort previous analyses by date descending to find the latest previous one
+        sorted_prev = sorted(previous_analyses, key=lambda x: x.created_at, reverse=True)
+        latest_prev = sorted_prev[0]
         
-        previous_findings = []
-        for analysis in previous_analyses[:3]:
-            date = analysis.created_at.strftime("%B %d")
-            previous_findings.append(f"{date}: {analysis.condition_label} (severity: {analysis.severity})")
+        prev_cond = latest_prev.condition_label
+        prev_sev = latest_prev.severity
         
-        prompt = f"""The user wants to compare with previous analysis or track progress.
+        curr_cond = "Healthy"
+        curr_sev = "none"
+        
+        if analysis_result and "diagnosis" in analysis_result:
+            diag = analysis_result["diagnosis"]
+            curr_cond = diag.get("condition_label", "Healthy")
+            curr_sev = diag.get("severity", "none")
+        
+        # Build prompt for comparisons
+        prompt = f"""The user is asking to compare their current dental photo results with their history.
+Current results:
+- Condition: {curr_cond}
+- Severity: {curr_sev}
 
-Current findings: {current_findings}
-Previous analysis:
-{chr(10).join(previous_findings)}
+Previous results (from {latest_prev.created_at.strftime('%Y-%m-%d')}):
+- Condition: {prev_cond}
+- Severity: {prev_sev}
 
-Provide a comparison and note any improvements or concerns. Be encouraging about positive changes.
-
-User's message: {user_message}"""
+Analyze if their condition got better, worse, or stayed the same, and respond in 3-4 friendly sentences. Be encouraging, conversational, and direct. Plain text only."""
         
-        try:
-            response = await self.client.generate_chat_response(
-                system_prompt=ASSISTANT_SYSTEM_PROMPT,
-                user_message=prompt,
-                temperature=0.7,
-                max_tokens=400
-            )
-            logger.info("[LLM] Comparison response generated successfully")
-            return response
-        except Exception as e:
-            logger.error(f"[LLM] Comparison response generation failed: {e}")
-            return "I can see your previous scans. Keep up with regular dental care and consistent oral hygiene!"
-    
-    def _fallback_analysis_response(self, condition: str, severity: str, findings: str) -> str:
-        """Fallback template-based response if LLM fails."""
-        response_parts = ["I've analyzed your teeth image."]
-        
-        if condition == "Healthy":
-            response_parts.append(
-                "Good news! Your teeth appear healthy overall. "
-                "Keep up with your regular brushing and flossing routine."
-            )
-        elif "cavity" in condition.lower():
-            response_parts.append(
-                "I detected signs of tooth decay. "
-                "I recommend scheduling a dental appointment for proper evaluation and treatment."
-            )
-        elif "plaque" in condition.lower() or "tartar" in condition.lower():
-            response_parts.append(
-                "I noticed some plaque buildup. "
-                "Consistent brushing and flossing can help improve this."
-            )
-        elif "gum" in condition.lower() or "gingivitis" in condition.lower():
-            response_parts.append(
-                "I see signs of gum inflammation. "
-                "Focus on gentle brushing along the gum line and daily flossing."
-            )
-        else:
-            response_parts.append(
-                "I had difficulty analyzing this image clearly. "
-                "Try taking a photo in better lighting with teeth clearly visible."
-            )
-        
-        response_parts.append(
-            "\n\n*Please note: This is an awareness tool, not a medical diagnosis. "
-            "Always consult a licensed dentist for professional evaluation.*"
+        response = await self.llm.generate(
+            system_prompt=ASSISTANT_SYSTEM_PROMPT,
+            user_message=prompt,
+            temperature=0.8,
+            max_tokens=300,
+            user_raw_message=user_message,
         )
-        
-        return " ".join(response_parts)
+        cleaned = self._clean_response(response) or response
+        if self._is_incomplete(cleaned):
+            cleaned = await self._try_complete_response(ASSISTANT_SYSTEM_PROMPT, prompt, cleaned)
+        return cleaned or f"Looking at your history, your {curr_cond.lower()} looks about the same as last time. Make sure you're keeping up with brushing and flossing!"
+    
+    def _fallback_analysis_response(self, condition: str, severity: str) -> str:
+        """Simple fallback for analysis if LLM fails."""
+        if condition == "Healthy":
+            return "Looking good! Your teeth appear healthy. Keep up with your regular brushing and flossing."
+        elif "cavity" in condition.lower():
+            return "I can see some signs that might indicate tooth decay. Worth having a dentist take a closer look."
+        elif "plaque" in condition.lower():
+            return "I notice some plaque buildup. Regular brushing and flossing should help with that."
+        elif "gum" in condition.lower():
+            return "Your gums look a bit inflamed. Try gentle brushing along the gum line and daily flossing."
+        else:
+            return "I had trouble getting a clear read on this image. Try taking another photo in better lighting."
 
 
 # Global conversation engine instance

@@ -28,6 +28,7 @@ from orchestrator.chat_service import (
     get_conversation_messages,
     send_message,
 )
+from orchestrator.rag_endpoints import router as rag_router
 
 
 @asynccontextmanager
@@ -35,6 +36,15 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     # Connect to MongoDB
     await Database.connect()
+    
+    # Initialize RAG system
+    try:
+        from orchestrator.rag.vector_store import vector_store
+        vector_store.load()
+        print("[RAG] RAG vector store loaded successfully")
+    except Exception as e:
+        print(f"[RAG] RAG vector store not available: {e}")
+    
     yield
     # Disconnect from MongoDB
     await Database.disconnect()
@@ -54,6 +64,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include RAG endpoints
+app.include_router(rag_router)
 
 
 @app.get("/health")

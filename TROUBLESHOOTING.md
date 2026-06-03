@@ -14,11 +14,11 @@ netstat -ano | findstr "8000 8001 8002"
 # Kill existing processes if needed
 taskkill /PID <process_id> /F
 
-# Recreate virtual environment
+# Recreate virtual environment using uv
 rmdir /s .venv
-python -m venv .venv
+uv venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt -c constraints.txt
+uv pip install -r requirements.txt -c constraints.txt
 ```
 
 ### 2. MongoDB Connection Failed
@@ -58,8 +58,8 @@ mongosh --eval "db.runCommand('ping')"
 # Ensure virtual environment is activated
 .\.venv\Scripts\Activate.ps1
 
-# Reinstall dependencies
-pip install -r requirements.txt -c constraints.txt --force-reinstall
+# Reinstall dependencies using uv
+uv pip install -r requirements.txt -c constraints.txt --force-reinstall
 
 # For OpenCV/NumPy issues
 .\scripts\fix-numpy-opencv.ps1
@@ -101,10 +101,7 @@ npm run dev
 **Solutions**:
 1. Check OpenRouter API key is valid
 2. Verify orchestrator service logs for errors
-3. Test OpenRouter connection:
-   ```python
-   python verify_setup.py
-   ```
+3. Verify orchestrator service logs for errors.
 
 ### 8. Conversation History Not Persisting
 
@@ -118,13 +115,7 @@ npm run dev
 
 ## 🔍 Debugging Steps
 
-### 1. Run Verification Script
-
-```powershell
-python verify_setup.py
-```
-
-### 2. Check Service Health
+### 1. Check Service Health
 
 ```powershell
 curl http://127.0.0.1:8000/health
@@ -167,10 +158,9 @@ mongosh dantshaant --eval "db.stats()"
 ## 🆘 Still Need Help?
 
 1. **Check terminal logs** for specific error messages
-2. **Run verification script**: `python verify_setup.py`
-3. **Review configuration**: Ensure all API keys are valid
-4. **Restart everything**: Stop all services and start fresh
-5. **Check system requirements**: Ensure all prerequisites are met
+2. **Review configuration**: Ensure all API keys are valid
+3. **Restart everything**: Stop all services and start fresh
+4. **Check system requirements**: Ensure all prerequisites are met
 
 ## 📞 Error Codes
 

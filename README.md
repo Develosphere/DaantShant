@@ -4,7 +4,8 @@
 
 ## 🎯 Features
 
-- **Conversational AI Assistant** - Natural language chat powered by LLM
+- **Conversational AI Assistant** - Natural language chat powered by LLM with **grounded dental knowledge**
+- **RAG-Enhanced Responses** - Retrieval-augmented generation using curated dental knowledge base
 - **Teeth Image Analysis** - Vision-based analysis using Gemini
 - **Clinical Diagnosis** - Automated condition classification
 - **Persistent Memory** - MongoDB-backed conversation history
@@ -17,7 +18,10 @@
 Frontend (Next.js)
     ↓
 Orchestrator (FastAPI) - Port 8000
-    ↓
+    ├── RAG System (Local Vector Store)
+    ├── Conversation Engine (Enhanced)
+    └── Services Integration
+        ↓
 ├── Teeth Analyzer (FastAPI) - Port 8001
 ├── Diagnosis Service (FastAPI) - Port 8002
 └── MongoDB (Local) - Port 27017
@@ -82,7 +86,16 @@ This will start:
 - **Teeth Analyzer** on http://127.0.0.1:8001
 - **Diagnosis Service** on http://127.0.0.1:8002
 
-### 6. Start Frontend
+### 6. Initialize RAG Knowledge Base
+
+```powershell
+# Ingest dental knowledge documents
+.\scripts\ingest-dental-knowledge.ps1
+```
+
+This will populate the RAG system with curated dental knowledge for enhanced responses.
+
+### 7. Start Frontend
 
 ```powershell
 cd apps\web
@@ -96,6 +109,7 @@ Frontend will be available at: **http://localhost:3000**
 
 Once services are running:
 - **Orchestrator API**: http://127.0.0.1:8000/docs
+- **RAG Management**: http://127.0.0.1:8000/docs#/RAG
 - **Teeth Analyzer API**: http://127.0.0.1:8001/docs
 - **Diagnosis API**: http://127.0.0.1:8002/docs
 
@@ -107,23 +121,30 @@ Once services are running:
 curl http://127.0.0.1:8000/health
 ```
 
-### Test Chat
+### Test Enhanced Chat
 
 1. Open http://localhost:3000/chat
-2. Send a message: "How often should I brush my teeth?"
-3. Upload a teeth image for analysis
+2. Ask: "Why do my gums bleed when I brush my teeth?"
+3. Notice the detailed, grounded response with specific dental knowledge
+4. Try: "How often should I brush my teeth?"
+5. Upload a teeth image for analysis
 
 ## 📁 Project Structure
 
 ```
 DaantShaant/
-├── orchestrator/              # API Gateway
+├── orchestrator/              # API Gateway + RAG System
 │   └── src/orchestrator/
 │       ├── main.py           # FastAPI app
 │       ├── chat_service.py   # Chat logic
-│       ├── conversation_engine.py  # LLM responses
+│       ├── conversation_engine.py  # Enhanced LLM responses
 │       ├── intent_classifier.py    # Intent detection
-│       └── openrouter_client.py    # LLM client
+│       ├── openrouter_client.py    # LLM client
+│       └── rag/              # RAG Implementation
+│           ├── embeddings.py     # Local embeddings
+│           ├── vector_store.py   # FAISS vector store
+│           ├── retrieval_service.py # Semantic search
+│           └── ingest.py         # Document ingestion
 ├── services/
 │   ├── teeth_analyzer/       # Vision analysis
 │   └── diagnosis/            # Clinical classification
@@ -131,6 +152,9 @@ DaantShaant/
 │   └── dantshaant_common/    # Shared schemas
 ├── apps/web/                 # Next.js frontend
 ├── specs/                    # OpenAPI contracts
+├── data/                     # Data storage
+│   ├── dental_knowledge/     # RAG knowledge base
+│   └── rag/                  # Vector store files
 └── scripts/                  # Automation scripts
 ```
 
@@ -169,8 +193,8 @@ uvicorn orchestrator.main:app --reload --port 8000
 ### Add Python Dependency
 
 ```powershell
-pip install package-name
-pip freeze > requirements.txt
+uv pip install package-name
+# Or add it to pyproject.toml / requirements.txt
 ```
 
 ### Frontend Development
@@ -207,8 +231,8 @@ mongod --dbpath C:\data\db
 ### Import errors
 
 ```powershell
-# Reinstall dependencies
-pip install -r requirements.txt -c constraints.txt --force-reinstall
+# Reinstall dependencies using uv
+uv pip install -r requirements.txt -c constraints.txt --force-reinstall
 ```
 
 ### OpenCV/NumPy issues
