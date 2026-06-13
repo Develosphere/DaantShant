@@ -2,9 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
 export function Header() {
   const pathname = usePathname();
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const updateCart = () => {
+      try {
+        const cart = JSON.parse(localStorage.getItem("dantshaant-cart") || "[]");
+        setCartCount(cart.length);
+      } catch (e) {}
+    };
+    updateCart();
+    window.addEventListener("storage", updateCart);
+    window.addEventListener("cart-updated", updateCart);
+    return () => {
+      window.removeEventListener("storage", updateCart);
+      window.removeEventListener("cart-updated", updateCart);
+    };
+  }, []);
   
   return (
     <header className="site-header">
@@ -54,6 +72,36 @@ export function Header() {
         >
           Chat
         </Link>
+        <Link 
+          href="/portal" 
+          style={{ 
+            padding: "0.5rem 1rem",
+            fontSize: "0.85rem",
+            fontWeight: pathname === "/portal" ? "600" : "500",
+            color: pathname === "/portal" ? "var(--accent)" : "var(--text-muted)",
+            textDecoration: "none",
+            transition: "color 0.2s ease"
+          }}
+        >
+          Portal
+        </Link>
+        {cartCount > 0 && (
+          <div className="header-cart-badge" style={{
+            background: "rgba(0, 242, 254, 0.15)",
+            border: "1px solid rgba(0, 242, 254, 0.3)",
+            color: "var(--accent)",
+            padding: "0.2rem 0.6rem",
+            borderRadius: "9999px",
+            fontSize: "0.75rem",
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: "0.3rem",
+            marginRight: "0.5rem"
+          }}>
+            🛒 <span>{cartCount}</span>
+          </div>
+        )}
         <div className="header-badge">
           <span className="pulse-dot" />
           Demo ready

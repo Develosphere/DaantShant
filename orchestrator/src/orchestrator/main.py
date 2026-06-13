@@ -29,6 +29,9 @@ from orchestrator.chat_service import (
     send_message,
 )
 from orchestrator.rag_endpoints import router as rag_router
+from orchestrator.dentist_portal.routes_auth import router as portal_auth_router
+from orchestrator.dentist_portal.routes_products import router as portal_products_router
+from orchestrator.recommendation_ai_system.routes import router as recommendation_router
 
 
 @asynccontextmanager
@@ -36,6 +39,13 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     # Connect to MongoDB
     await Database.connect()
+
+    # Initialize Dentist Portal indexes
+    try:
+        from orchestrator.dentist_portal.db import init_portal_indexes
+        await init_portal_indexes()
+    except Exception as e:
+        print(f"[PORTAL] Index init failed: {e}")
     
     # Initialize RAG system
     try:
@@ -67,6 +77,11 @@ app.add_middleware(
 
 # Include RAG endpoints
 app.include_router(rag_router)
+
+# Include Dentist Portal endpoints
+app.include_router(portal_auth_router)
+app.include_router(portal_products_router)
+app.include_router(recommendation_router)
 
 
 @app.get("/health")
