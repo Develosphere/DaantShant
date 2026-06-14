@@ -2025,4 +2025,506 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* ─── Portal auth (patient / dentist / admin) — themed ─── */
+.portal-auth-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-auth-layout {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 2.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+  animation: fade-up 0.6s ease both;
+}
+
+.portal-auth-hero {
+  padding-top: 1rem;
+}
+
+.portal-auth-eyebrow {
+  margin-bottom: 0.85rem;
+}
+
+.portal-auth-page[data-role="patient"] .portal-auth-eyebrow {
+  color: var(--accent);
+}
+
+.portal-auth-page[data-role="dentist"] .portal-auth-eyebrow {
+  color: var(--violet);
+}
+
+.portal-auth-page[data-role="admin"] .portal-auth-eyebrow {
+  color: var(--warn);
+}
+
+.portal-auth-hero-title {
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  margin-bottom: 0.85rem;
+}
+
+.portal-auth-hero-gradient {
+  display: block;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--violet) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.portal-auth-page[data-role="dentist"] .portal-auth-hero-gradient {
+  background: linear-gradient(135deg, var(--violet) 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.portal-auth-page[data-role="admin"] .portal-auth-hero-gradient {
+  background: linear-gradient(135deg, var(--warn) 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.portal-auth-pills {
+  margin-bottom: 1.75rem;
+}
+
+.portal-auth-role-switch {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--glass-border);
+}
+
+.portal-auth-role-switch > span {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.65rem;
+}
+
+.portal-auth-role-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.portal-auth-role-link {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--text-muted);
+  text-decoration: none;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-highlight);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.portal-auth-role-link:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.portal-auth-orb-role {
+  position: fixed;
+  width: 420px;
+  height: 420px;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+}
+
+.portal-auth-page[data-role="patient"] .portal-auth-orb-role {
+  background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+}
+
+.portal-auth-page[data-role="dentist"] .portal-auth-orb-role {
+  background: radial-gradient(circle, var(--violet-glow), transparent 70%);
+}
+
+.portal-auth-page[data-role="admin"] .portal-auth-orb-role {
+  background: radial-gradient(circle, rgba(245, 185, 66, 0.4), transparent 70%);
+}
+
+.portal-auth-panel {
+  padding: 1.75rem;
+  box-shadow: var(--shadow-lg);
+  animation: fade-up 0.6s 0.1s ease both;
+}
+
+.portal-auth-panel-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.portal-auth-panel-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-size: 1.35rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+
+.portal-auth-panel-head h2 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.02em;
+}
+
+.portal-auth-panel-head p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.portal-auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1.35rem;
+  padding: 0.25rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+}
+
+.portal-auth-tab {
+  text-align: center;
+  padding: 0.65rem 0.5rem;
+  border-radius: 8px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.portal-auth-tab.active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.portal-auth-page[data-role="patient"] .portal-auth-tab.active {
+  color: var(--accent);
+}
+
+.portal-auth-page[data-role="dentist"] .portal-auth-tab.active {
+  color: #c4b5fd;
+}
+
+.portal-auth-page[data-role="admin"] .portal-auth-tab.active {
+  color: var(--warn);
+}
+
+.portal-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.portal-auth-form-register {
+  max-height: min(62vh, 520px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.portal-auth-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.portal-auth-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.portal-auth-row .form-group {
+  margin-bottom: 1rem;
+}
+
+.portal-auth-submit {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.portal-auth-page[data-role="dentist"] .portal-auth-submit.btn-glow {
+  background: linear-gradient(135deg, var(--violet), #9f8fff);
+  box-shadow: 0 4px 20px var(--violet-glow);
+}
+
+.portal-auth-page[data-role="admin"] .portal-auth-submit.btn-glow {
+  color: var(--bg-deep);
+  background: linear-gradient(135deg, var(--warn), #fcd34d);
+  box-shadow: 0 4px 20px rgba(245, 185, 66, 0.35);
+}
+
+.portal-auth-error {
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 107, 122, 0.1);
+  border: 1px solid rgba(255, 107, 122, 0.35);
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+.portal-auth-hint,
+.portal-auth-optional {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+.portal-auth-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin: 0.5rem 0 0.75rem;
+}
+
+.portal-auth-dentist-block {
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: var(--radius-sm);
+  background: rgba(124, 108, 240, 0.06);
+  border: 1px solid rgba(124, 108, 240, 0.2);
+}
+
+.portal-auth-avatar-field {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--glass-border);
+}
+
+.portal-auth-avatar-ring {
+  padding: 3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--violet));
+  flex-shrink: 0;
+}
+
+.portal-auth-page[data-role="dentist"] .portal-auth-avatar-ring {
+  background: linear-gradient(135deg, var(--violet), #a78bfa);
+}
+
+.portal-auth-page[data-role="admin"] .portal-auth-avatar-ring {
+  background: linear-gradient(135deg, var(--warn), #fbbf24);
+}
+
+.portal-auth-avatar-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: var(--surface-solid);
+}
+
+.portal-auth-avatar-preview.small {
+  width: 44px;
+  height: 44px;
+}
+
+.portal-auth-avatar-upload {
+  margin-bottom: 0 !important;
+  flex: 1;
+}
+
+.portal-auth-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.portal-auth-file-btn {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.portal-auth-file-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.portal-auth-footer-bar {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.portal-auth-footer-bar a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.portal-auth-footer-bar a:hover {
+  color: var(--accent);
+}
+
+.portal-auth-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.portal-dashboard {
+  min-height: 100vh;
+  padding: 1.5rem;
+  position: relative;
+}
+
+.portal-dashboard-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-dashboard-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.portal-dashboard-header h1 {
+  font-family: var(--font-display);
+  margin: 0.35rem 0 0;
+  font-size: 1.5rem;
+}
+
+.portal-dashboard-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.portal-dashboard-user strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.portal-dashboard-user span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.portal-auth-logout {
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.portal-dashboard-main {
+  position: relative;
+  z-index: 1;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.portal-dashboard-welcome {
+  background: var(--surface);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.portal-dashboard-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.portal-dashboard-links a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .portal-auth-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .portal-auth-hero {
+    text-align: center;
+  }
+
+  .portal-auth-pills {
+    justify-content: center;
+  }
+
+  .portal-auth-role-links {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .portal-auth-row {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-auth-form-register {
+    max-height: none;
+  }
+}
 

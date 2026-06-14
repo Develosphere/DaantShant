@@ -24,6 +24,15 @@ export function Header() {
     };
   }, []);
   
+  const navLink = (active: boolean) => ({
+    padding: "0.5rem 1rem",
+    fontSize: "0.85rem",
+    fontWeight: active ? "600" : "500",
+    color: active ? "var(--accent)" : "var(--text-muted)",
+    textDecoration: "none",
+    transition: "color 0.2s ease",
+  } as const);
+  
   return (
     <header className="site-header">
       <div className="brand">
@@ -46,44 +55,14 @@ export function Header() {
       </div>
       
       <nav style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        <Link 
-          href="/" 
-          style={{ 
-            padding: "0.5rem 1rem",
-            fontSize: "0.85rem",
-            fontWeight: pathname === "/" ? "600" : "500",
-            color: pathname === "/" ? "var(--accent)" : "var(--text-muted)",
-            textDecoration: "none",
-            transition: "color 0.2s ease"
-          }}
-        >
+        <Link href="/" style={navLink(pathname === "/")}>
           Analyzer
         </Link>
-        <Link 
-          href="/chat" 
-          style={{ 
-            padding: "0.5rem 1rem",
-            fontSize: "0.85rem",
-            fontWeight: pathname === "/chat" ? "600" : "500",
-            color: pathname === "/chat" ? "var(--accent)" : "var(--text-muted)",
-            textDecoration: "none",
-            transition: "color 0.2s ease"
-          }}
-        >
+        <Link href="/chat" style={navLink(pathname === "/chat")}>
           Chat
         </Link>
-        <Link 
-          href="/portal" 
-          style={{ 
-            padding: "0.5rem 1rem",
-            fontSize: "0.85rem",
-            fontWeight: pathname === "/portal" ? "600" : "500",
-            color: pathname === "/portal" ? "var(--accent)" : "var(--text-muted)",
-            textDecoration: "none",
-            transition: "color 0.2s ease"
-          }}
-        >
-          Portal
+        <Link href="/portal" style={navLink(pathname === "/portal" || pathname.startsWith("/products"))}>
+          Products
         </Link>
         {cartCount > 0 && (
           <div className="header-cart-badge" style={{

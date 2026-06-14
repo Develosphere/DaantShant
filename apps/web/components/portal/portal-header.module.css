@@ -1,0 +1,156 @@
+.header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.mark {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--pa-accent, #2ee8d4);
+}
+
+.header[data-role="dentist"] .mark {
+  color: #7c6cf0;
+}
+
+.header[data-role="admin"] .mark {
+  color: #f5b942;
+}
+
+.mark svg {
+  width: 20px;
+  height: 20px;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.brandName {
+  font-family: var(--font-syne, var(--font-jakarta)), sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.brandTag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8b9bb8;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.navLink {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #8b9bb8;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.navLink:hover {
+  color: #f0f4fc;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.navLinkActive {
+  color: var(--pa-accent, #2ee8d4);
+  font-weight: 600;
+}
+
+.header[data-role="dentist"] .navLinkActive {
+  color: #c4b5fd;
+}
+
+.header[data-role="admin"] .navLinkActive {
+  color: #f5b942;
+}
+
+.userBlock {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-left: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #121826;
+}
+
+.userMeta {
+  display: none;
+}
+
+.logoutBtn {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #8b9bb8;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.logoutBtn:hover {
+  color: #f0f4fc;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+@media (min-width: 640px) {
+  .userMeta {
+    display: block;
+  }
+
+  .userMeta strong {
+    display: block;
+    font-size: 0.82rem;
+  }
+
+  .userMeta span {
+    font-size: 0.72rem;
+    color: #8b9bb8;
+  }
+}

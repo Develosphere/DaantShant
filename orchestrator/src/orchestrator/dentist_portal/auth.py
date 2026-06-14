@@ -69,3 +69,9 @@ async def get_current_patient(user: dict = Depends(get_current_user)) -> dict:
     if user.get("role") != UserRole.PATIENT:
         raise HTTPException(status_code=403, detail="Patient role required")
     return user
+
+
+async def get_current_admin(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return user

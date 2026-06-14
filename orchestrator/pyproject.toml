@@ -17,11 +17,14 @@ dependencies = [
     "PyPDF2>=3.0.0",
     "python-docx>=0.8.11",
     "numpy>=1.24.0",
-    # Dentist Portal + Recommendation AI
+    # Dentist Portal auth
     "bcrypt>=4.0.0",
     "pyjwt>=2.8.0",
+    "email-validator>=2.0.0",
+    # Recommendation AI (LangGraph)
+    "langgraph>=0.2.40",
+    "langchain-core>=0.3.0",
     "openai>=1.30.0",
-    "openai-agents>=0.0.7",
 ]
 
 [tool.uv.sources]

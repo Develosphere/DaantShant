@@ -14,7 +14,12 @@ class Settings(BaseSettings):
     teeth_analyzer_url: str = "http://127.0.0.1:8001"
     diagnosis_url: str = "http://127.0.0.1:8002"
     request_timeout_seconds: float = 60.0
-    cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ]
     session_log_dir: str = "data/sessions"
     live_max_fps: float = 1.0
     live_max_analyses_per_session: int = 8

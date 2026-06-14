@@ -8,15 +8,7 @@ export function getWsUrl(): string {
   return `${base}/v1/live/session`;
 }
 
-export function getUserId(): string {
-  if (typeof window === "undefined") return "";
-  let id = localStorage.getItem("dantshaant_user_id");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("dantshaant_user_id", id);
-  }
-  return id;
-}
+export { getUserId } from "./user-id";
 
 export async function analyzeSnapshot(
   imageBase64: string,

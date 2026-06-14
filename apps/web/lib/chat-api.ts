@@ -3,15 +3,9 @@ import type { ChatMessage, ConversationSummary, SendMessageResponse } from "./ty
 const API_BASE =
   process.env.NEXT_PUBLIC_ORCHESTRATOR_URL ?? "http://127.0.0.1:8000";
 
-export function getUserId(): string {
-  if (typeof window === "undefined") return "";
-  let id = localStorage.getItem("dantshaant_user_id");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("dantshaant_user_id", id);
-  }
-  return id;
-}
+import { getUserId } from "./user-id";
+
+export { getUserId };
 
 export async function sendChatMessage(
   text: string,

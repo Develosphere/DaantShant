@@ -6,7 +6,14 @@ import { fileToImagePayload } from "@/lib/image";
 import type { ChatMessage } from "@/lib/types";
 import { ChatMessageBubble } from "./ChatMessage";
 
-export function ChatInterface() {
+type Props = {
+  /** localStorage key for persisting the active conversation id */
+  conversationStorageKey?: string;
+};
+
+export function ChatInterface({
+  conversationStorageKey = "dantshaant_current_conversation",
+}: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [conversationId, setConversationId] = useState<string | undefined>();
@@ -33,7 +40,7 @@ export function ChatInterface() {
   // Load conversation from localStorage if exists
   useEffect(() => {
     const loadSavedConversation = async () => {
-      const savedConvId = localStorage.getItem("dantshaant_current_conversation");
+      const savedConvId = localStorage.getItem(conversationStorageKey);
       console.log("Checking for saved conversation:", savedConvId);
       
       if (savedConvId) {
@@ -45,7 +52,7 @@ export function ChatInterface() {
           console.error("Failed to load saved conversation:", error);
           // Clear invalid conversation ID and start fresh
           console.log("Clearing invalid conversation ID");
-          localStorage.removeItem("dantshaant_current_conversation");
+          localStorage.removeItem(conversationStorageKey);
           setConversationId(undefined);
           setMessages([]);
         }
@@ -53,7 +60,7 @@ export function ChatInterface() {
     };
     
     loadSavedConversation();
-  }, []);
+  }, [conversationStorageKey]);
   
   const loadConversation = async (convId: string) => {
     try {
@@ -92,7 +99,7 @@ export function ChatInterface() {
       if (!conversationId) {
         console.log("Setting new conversation ID:", response.conversation_id);
         setConversationId(response.conversation_id);
-        localStorage.setItem("dantshaant_current_conversation", response.conversation_id);
+        localStorage.setItem(conversationStorageKey, response.conversation_id);
       }
       
       // Add both messages to the chat
@@ -160,7 +167,7 @@ export function ChatInterface() {
     setConversationId(undefined);
     setInputText("");
     setImageAttachment(null);
-    localStorage.removeItem("dantshaant_current_conversation");
+    localStorage.removeItem(conversationStorageKey);
   };
   
   return (

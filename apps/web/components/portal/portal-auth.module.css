@@ -1,0 +1,596 @@
+/* Portal auth — self-contained theme (patient / dentist / admin) */
+
+.shell {
+  --pa-bg: #06080f;
+  --pa-surface: rgba(18, 24, 38, 0.72);
+  --pa-text: #f0f4fc;
+  --pa-muted: #8b9bb8;
+  --pa-dim: #5c6b85;
+  --pa-accent: #2ee8d4;
+  --pa-accent-glow: rgba(46, 232, 212, 0.35);
+  --pa-violet: #7c6cf0;
+  --pa-violet-glow: rgba(124, 108, 240, 0.25);
+  --pa-warn: #f5b942;
+  --pa-danger: #ff6b7a;
+  --pa-border: rgba(255, 255, 255, 0.08);
+  --pa-highlight: rgba(255, 255, 255, 0.04);
+  --pa-radius: 16px;
+  --pa-radius-sm: 10px;
+  --pa-radius-lg: 24px;
+  --pa-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  background: var(--pa-bg);
+  color: var(--pa-text);
+  font-family: var(--font-jakarta, system-ui), sans-serif;
+  line-height: 1.5;
+}
+
+.orbA,
+.orbB,
+.orbRole {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.orbA {
+  width: 560px;
+  height: 560px;
+  top: -180px;
+  right: -120px;
+  background: radial-gradient(circle, var(--pa-accent-glow), transparent 70%);
+  animation: floatA 14s ease-in-out infinite;
+}
+
+.orbB {
+  width: 480px;
+  height: 480px;
+  bottom: -140px;
+  left: -100px;
+  background: radial-gradient(circle, var(--pa-violet-glow), transparent 70%);
+  animation: floatB 18s ease-in-out infinite;
+}
+
+.orbRole {
+  width: 420px;
+  height: 420px;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  filter: blur(120px);
+  opacity: 0.35;
+}
+
+.shell[data-role="patient"] .orbRole {
+  background: radial-gradient(circle, var(--pa-accent-glow), transparent 70%);
+}
+
+.shell[data-role="dentist"] .orbRole {
+  background: radial-gradient(circle, var(--pa-violet-glow), transparent 70%);
+}
+
+.shell[data-role="admin"] .orbRole {
+  background: radial-gradient(circle, rgba(245, 185, 66, 0.4), transparent 70%);
+}
+
+.grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black, transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.layout {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 2.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+  animation: fadeUp 0.6s ease both;
+}
+
+.hero {
+  padding-top: 1rem;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 0.85rem;
+}
+
+.shell[data-role="patient"] .eyebrow {
+  color: var(--pa-accent);
+}
+
+.shell[data-role="dentist"] .eyebrow {
+  color: var(--pa-violet);
+}
+
+.shell[data-role="admin"] .eyebrow {
+  color: var(--pa-warn);
+}
+
+.heroTitle {
+  font-family: var(--font-syne, var(--font-jakarta)), sans-serif;
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.85rem;
+}
+
+.heroGradient {
+  display: block;
+  background: linear-gradient(135deg, var(--pa-accent) 0%, var(--pa-violet) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.shell[data-role="dentist"] .heroGradient {
+  background: linear-gradient(135deg, var(--pa-violet) 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.shell[data-role="admin"] .heroGradient {
+  background: linear-gradient(135deg, var(--pa-warn) 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.heroDesc {
+  max-width: 540px;
+  color: var(--pa-muted);
+  font-size: 1.05rem;
+  margin: 0 0 1.25rem;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.75rem;
+}
+
+.pills li {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--pa-muted);
+  background: var(--pa-highlight);
+  border: 1px solid var(--pa-border);
+  border-radius: 999px;
+}
+
+.roleSwitch {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--pa-border);
+}
+
+.roleSwitchLabel {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pa-dim);
+  margin-bottom: 0.65rem;
+}
+
+.roleLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.roleLink {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--pa-muted);
+  text-decoration: none;
+  border: 1px solid var(--pa-border);
+  border-radius: 999px;
+  background: var(--pa-highlight);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.roleLink:hover {
+  color: var(--pa-text);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.panel {
+  padding: 1.75rem;
+  background: var(--pa-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--pa-border);
+  border-radius: var(--pa-radius-lg);
+  box-shadow: var(--pa-shadow);
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+
+.panelHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.panelIcon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-size: 1.35rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--pa-border);
+  flex-shrink: 0;
+}
+
+.panelHead h2 {
+  font-family: var(--font-syne, var(--font-jakarta)), sans-serif;
+  font-size: 1.35rem;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.02em;
+}
+
+.panelHead p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--pa-muted);
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1.35rem;
+  padding: 0.25rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--pa-radius-sm);
+  border: 1px solid var(--pa-border);
+}
+
+.tab {
+  text-align: center;
+  padding: 0.65rem 0.5rem;
+  border-radius: 8px;
+  color: var(--pa-muted);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.tabActive {
+  color: var(--pa-text);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.shell[data-role="patient"] .tabActive {
+  color: var(--pa-accent);
+}
+
+.shell[data-role="dentist"] .tabActive {
+  color: #c4b5fd;
+}
+
+.shell[data-role="admin"] .tabActive {
+  color: var(--pa-warn);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.formRegister {
+  max-height: min(62vh, 520px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.formGroup {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.formGroup label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--pa-muted);
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  padding: 0.75rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--pa-text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--pa-border);
+  border-radius: var(--pa-radius-sm);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  border-color: var(--pa-accent);
+  box-shadow: 0 0 0 2px rgba(46, 232, 212, 0.15);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.row .formGroup {
+  margin-bottom: 1rem;
+}
+
+.submit {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--pa-bg);
+  background: linear-gradient(135deg, var(--pa-accent), #5eead4);
+  border: none;
+  border-radius: var(--pa-radius-sm);
+  cursor: pointer;
+  box-shadow: 0 4px 20px var(--pa-accent-glow);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.shell[data-role="dentist"] .submit {
+  color: #fff;
+  background: linear-gradient(135deg, var(--pa-violet), #9f8fff);
+  box-shadow: 0 4px 20px var(--pa-violet-glow);
+}
+
+.shell[data-role="admin"] .submit {
+  color: var(--pa-bg);
+  background: linear-gradient(135deg, var(--pa-warn), #fcd34d);
+  box-shadow: 0 4px 20px rgba(245, 185, 66, 0.35);
+}
+
+.error {
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 1rem;
+  border-radius: var(--pa-radius-sm);
+  background: rgba(255, 107, 122, 0.1);
+  border: 1px solid rgba(255, 107, 122, 0.35);
+  color: var(--pa-danger);
+  font-size: 0.85rem;
+}
+
+.hint,
+.optional {
+  font-size: 0.72rem;
+  color: var(--pa-dim);
+  font-weight: 400;
+}
+
+.sectionLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pa-violet);
+  margin: 0.5rem 0 0.75rem;
+}
+
+.dentistBlock {
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: var(--pa-radius-sm);
+  background: rgba(124, 108, 240, 0.06);
+  border: 1px solid rgba(124, 108, 240, 0.2);
+}
+
+.avatarField {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: var(--pa-radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--pa-border);
+}
+
+.avatarRing {
+  padding: 3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pa-accent), var(--pa-violet));
+  flex-shrink: 0;
+}
+
+.shell[data-role="dentist"] .avatarRing {
+  background: linear-gradient(135deg, var(--pa-violet), #a78bfa);
+}
+
+.shell[data-role="admin"] .avatarRing {
+  background: linear-gradient(135deg, var(--pa-warn), #fbbf24);
+}
+
+.avatarPreview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: #121826;
+}
+
+.avatarUpload {
+  margin-bottom: 0 !important;
+  flex: 1;
+}
+
+.fileInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fileBtn {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--pa-text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--pa-border);
+  border-radius: var(--pa-radius-sm);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.fileBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.footer {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 1rem 1.5rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--pa-muted);
+}
+
+.footerDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--pa-dim);
+}
+
+.footer a {
+  color: var(--pa-muted);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  color: var(--pa-accent);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatA {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-30px, 20px);
+  }
+}
+
+@keyframes floatB {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(25px, -15px);
+  }
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .hero {
+    text-align: center;
+  }
+
+  .heroDesc {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .pills,
+  .roleLinks {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .formRegister {
+    max-height: none;
+  }
+}
