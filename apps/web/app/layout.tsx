@@ -13,8 +13,9 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "DantShaant — AI Dental Assistant",
-  description: "Instant teeth analysis with live camera and AI-powered diagnosis",
+  title: "DantShaant — Scan. Detect. Protect.",
+  description:
+    "AI dental scanner, smart assistant, and dentist matching — everything you need for better oral health.",
 };
 
 export default function RootLayout({

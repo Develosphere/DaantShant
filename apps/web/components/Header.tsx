@@ -55,7 +55,7 @@ export function Header() {
       </div>
       
       <nav style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        <Link href="/" style={navLink(pathname === "/")}>
+        <Link href="/scan" style={navLink(pathname === "/scan")}>
           Analyzer
         </Link>
         <Link href="/chat" style={navLink(pathname === "/chat")}>
