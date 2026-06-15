@@ -170,3 +170,59 @@ class RecommendRequest(BaseModel):
 class RecommendResponse(BaseModel):
     session_id: str
     recommendations: str
+
+
+# --- Dentist recommendation (map) ---
+
+class DentistRecommendRequest(BaseModel):
+    issue: str = Field(min_length=1, max_length=200)
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    severity: Optional[str] = "moderate"
+    scan_id: Optional[str] = None
+    session_id: Optional[str] = None
+    radius_km: Optional[float] = Field(default=25.0, ge=1.0, le=100.0)
+
+
+class DentistPin(BaseModel):
+    tier: str  # "platform" | "general"
+    dentist_id: Optional[str] = None
+    place_id: Optional[str] = None
+    name: str
+    lat: float
+    lng: float
+    address: str = ""
+    phone: Optional[str] = None
+    rating: Optional[float] = None
+    distance_km: float = 0.0
+    specialties: list[str] = []
+    is_partner: bool = False
+    is_verified: bool = False
+    is_best: bool = False
+    rank: int = 0
+    clinic_name: str = ""
+    degree: Optional[str] = None
+    profile_image: Optional[str] = None
+    recommendation_reason: str = ""
+
+
+class DentistRecommendResponse(BaseModel):
+    session_id: str
+    issue: str
+    patient_lat: float
+    patient_lng: float
+    dentists: list[DentistPin]
+
+
+class BookConsultationRequest(BaseModel):
+    dentist_id: str
+    issue: str = Field(min_length=1, max_length=200)
+    scan_id: Optional[str] = None
+    session_id: Optional[str] = None
+    message: Optional[str] = Field(default=None, max_length=1000)
+
+
+class BookConsultationResponse(BaseModel):
+    appointment_id: str
+    status: str
+    message: str

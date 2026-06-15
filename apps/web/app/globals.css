@@ -2528,3 +2528,42 @@ body {
   }
 }
 
+/* Google Places autocomplete dropdown (location picker) */
+.pac-container {
+  background: #121826 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  margin-top: 4px !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45) !important;
+  font-family: inherit !important;
+  z-index: 10000 !important;
+}
+
+.pac-item {
+  padding: 0.5rem 0.75rem 0.5rem 0.75rem !important;
+  color: #8b9bb8 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  cursor: pointer !important;
+}
+
+.pac-item:hover,
+.pac-item-selected {
+  background: rgba(0, 162, 240, 0.1) !important;
+}
+
+.pac-item-query {
+  color: #f0f4fc !important;
+}
+
+/* Hide broken Google sprite icons in the dropdown */
+.pac-icon,
+.pac-icon-marker {
+  display: none !important;
+  background: none !important;
+  background-image: none !important;
+}
+
+.pac-target-input {
+  background-image: none !important;
+}
+

@@ -82,10 +82,10 @@ async def upload_product(
         product.name, product.raw_description, product.category
     )
 
-    # 2. Generate embedding (via recommendation system)
+    # 2. Generate embedding (via recommendation system — Gemini)
     from orchestrator.recommendation_ai_system.embedding_service import embed_text
     text_to_embed = ai_data["ai_description"] + " " + " ".join(ai_data["problems_solved"])
-    embedding = await embed_text(text_to_embed)
+    embedding = await embed_text(text_to_embed, task_type="RETRIEVAL_DOCUMENT")
 
     # 3. Store in MongoDB
     doc = {
@@ -310,7 +310,8 @@ async def update_product(
         changes["problems_solved"] = ai_data["problems_solved"]
         from orchestrator.recommendation_ai_system.embedding_service import embed_text
         changes["embedding"] = await embed_text(
-            ai_data["ai_description"] + " " + " ".join(ai_data["problems_solved"])
+            ai_data["ai_description"] + " " + " ".join(ai_data["problems_solved"]),
+            task_type="RETRIEVAL_DOCUMENT",
         )
 
     changes["updated_at"] = datetime.now(timezone.utc)

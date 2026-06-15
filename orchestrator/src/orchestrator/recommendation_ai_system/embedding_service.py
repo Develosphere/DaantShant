@@ -1,51 +1,75 @@
 """Embedding service for product semantic search.
 
-Uses OpenAI's text-embedding-3-small via the OpenAI SDK.
-Falls back to a simple TF-IDF-style keyword vector if OpenAI key is unavailable.
+Uses Google Gemini text embeddings (same API key as teeth analyzer).
+Falls back to a keyword vector if Gemini is unavailable.
 """
 
 import logging
 import os
-from typing import Optional
+from pathlib import Path
+from typing import Literal
 
+import httpx
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
-_openai_client = None
+EmbedTask = Literal["RETRIEVAL_QUERY", "RETRIEVAL_DOCUMENT"]
 
 
-def _get_openai_client():
-    global _openai_client
-    if _openai_client is None:
-        try:
-            from openai import AsyncOpenAI
-            api_key = os.getenv("OPENAI_API_KEY")
-            if api_key:
-                _openai_client = AsyncOpenAI(api_key=api_key)
-                logger.info("[EMBEDDING] OpenAI client initialized")
-            else:
-                logger.warning("[EMBEDDING] OPENAI_API_KEY not set — using keyword fallback")
-        except ImportError:
-            logger.warning("[EMBEDDING] openai package not installed — using keyword fallback")
-    return _openai_client
+def _load_env_var(key: str, default: str = "") -> str:
+    val = os.getenv(key)
+    if val:
+        return val
+    try:
+        root = Path(__file__).resolve().parents[4]
+        env_path = root / ".env"
+        if env_path.is_file():
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                if k.strip() == key:
+                    return v.strip().strip('"').strip("'")
+    except Exception as exc:
+        logger.debug("[EMBEDDING] Could not read .env for %s: %s", key, exc)
+    return default
 
 
-async def embed_text(text: str) -> list[float]:
-    """Embed text using OpenAI text-embedding-3-small. Falls back to keyword vector."""
-    client = _get_openai_client()
-    if client:
-        try:
-            response = await client.embeddings.create(
-                model="text-embedding-3-small",
-                input=text,
-            )
-            return response.data[0].embedding
-        except Exception as exc:
-            logger.warning("[EMBEDDING] OpenAI embed failed: %s — using fallback", exc)
+async def embed_text(
+    text: str,
+    *,
+    task_type: EmbedTask = "RETRIEVAL_QUERY",
+) -> list[float]:
+    """Embed text with Gemini. Use RETRIEVAL_QUERY for searches, RETRIEVAL_DOCUMENT for indexing."""
+    api_key = _load_env_var("TEETH_ANALYZER_GEMINI_API_KEY")
+    if not api_key:
+        logger.warning("[EMBEDDING] TEETH_ANALYZER_GEMINI_API_KEY not set — using keyword fallback")
+        return _keyword_vector(text)
 
-    # Keyword fallback: fixed-vocabulary 128-dim binary vector
-    return _keyword_vector(text)
+    model = _load_env_var("TEETH_ANALYZER_GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:embedContent?key={api_key}"
+    payload = {
+        "model": f"models/{model}",
+        "content": {"parts": [{"text": text}]},
+        "taskType": task_type,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Gemini embed error: {resp.status_code} - {resp.text[:200]}")
+            data = resp.json()
+            embedding = data.get("embedding", {}).get("values")
+            if not embedding:
+                raise RuntimeError("Gemini returned empty embedding")
+            logger.debug("[EMBEDDING] Gemini embed ok (%d dims, task=%s)", len(embedding), task_type)
+            return embedding
+    except Exception as exc:
+        logger.warning("[EMBEDDING] Gemini embed failed: %s — using fallback", exc)
+        return _keyword_vector(text)
 
 
 def _keyword_vector(text: str) -> list[float]:
@@ -84,6 +108,8 @@ def _keyword_vector(text: str) -> list[float]:
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
     """Cosine similarity between two vectors."""
+    if len(a) != len(b):
+        return 0.0
     va, vb = np.array(a, dtype=float), np.array(b, dtype=float)
     denom = np.linalg.norm(va) * np.linalg.norm(vb)
     if denom == 0:

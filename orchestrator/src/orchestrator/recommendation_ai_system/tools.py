@@ -1,9 +1,9 @@
-"""OpenAI Agents SDK tools for dental product recommendation.
+"""Gemini-backed tools for dental product recommendation.
 
 Tools:
   1. search_products_by_issue   — semantic search over product embeddings
   2. get_product_details        — fetch full product doc
-  3. rank_recommendations       — LLM reranking with reasons
+  3. rank_recommendations       — Gemini reranking with reasons
   4. log_recommendation_session — persist session to MongoDB
 """
 
@@ -143,7 +143,7 @@ async def rank_recommendations(products: list[dict], patient_issue: str) -> list
     Returns:
         Top-5 reranked products each with a recommendation_reason.
     """
-    from orchestrator.openrouter_client import openrouter_client
+    from orchestrator.llm_provider import llm_provider
 
     product_summary = json.dumps(
         [
@@ -170,7 +170,7 @@ async def rank_recommendations(products: list[dict], patient_issue: str) -> list
     )
 
     try:
-        raw = await openrouter_client.generate_chat_response(
+        raw = await llm_provider.gemini.generate(
             system_prompt="You are a dental product ranking expert. Return ONLY valid JSON arrays.",
             user_message=prompt,
             temperature=0.2,

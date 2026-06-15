@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type { PipelineResult } from "@/lib/types";
 import { CheckoutModal } from "./CheckoutModal";
 import Link from "next/link";
+import { FindDentistsButton } from "./dentists/FindDentistsButton";
 
 type Props = {
   result: PipelineResult | null;
@@ -315,6 +316,16 @@ export function DiagnosisReport({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {!loading && result && !liveActive && diagnosis.meets_threshold !== false && (
+        <div style={{ marginTop: "1.25rem" }}>
+          <FindDentistsButton
+            issue={diagnosis.condition_label}
+            scanId={diagnosis.diagnosis_id}
+            severity={diagnosis.severity}
+          />
         </div>
       )}
 

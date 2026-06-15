@@ -13,6 +13,7 @@ const PORTAL_NAV: Record<PortalRole, NavItem[]> = {
     { href: "/patient/dashboard", label: "Dashboard", authOnly: true },
     { href: "/patient/scan", label: "AI scan", authOnly: true },
     { href: "/patient/chat", label: "AI chat", authOnly: true },
+    { href: "/patient/dentists", label: "Find dentists", authOnly: true },
     { href: "/patient/scans", label: "My scans", authOnly: true },
   ],
   dentist: [

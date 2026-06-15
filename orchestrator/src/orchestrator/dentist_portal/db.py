@@ -27,6 +27,14 @@ def get_portal_orders_col():
     return get_portal_db()["portal_orders"]
 
 
+def get_portal_dentist_recommendations_col():
+    return get_portal_db()["portal_dentist_recommendations"]
+
+
+def get_portal_appointments_col():
+    return get_portal_db()["portal_appointments"]
+
+
 async def init_portal_indexes():
     """Create indexes for all portal collections."""
     users = get_portal_users_col()
@@ -34,9 +42,15 @@ async def init_portal_indexes():
     sessions = get_portal_sessions_col()
     recs = get_portal_recommendations_col()
     orders = get_portal_orders_col()
+    dentist_recs = get_portal_dentist_recommendations_col()
+    appointments = get_portal_appointments_col()
 
     await users.create_index("email", unique=True)
     await users.create_index("role")
+    try:
+        await users.create_index([("coordinates", "2dsphere")])
+    except Exception:
+        pass
 
     await products.create_index("dentist_id")
     await products.create_index("category")
@@ -51,5 +65,12 @@ async def init_portal_indexes():
 
     await orders.create_index("dentist_id")
     await orders.create_index("created_at")
+
+    await dentist_recs.create_index("session_id")
+    await dentist_recs.create_index("patient_id")
+
+    await appointments.create_index("dentist_id")
+    await appointments.create_index("patient_id")
+    await appointments.create_index("status")
 
     print("[PORTAL] MongoDB indexes initialized")

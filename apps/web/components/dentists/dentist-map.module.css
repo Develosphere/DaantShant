@@ -1,0 +1,260 @@
+.mapWrap {
+  position: relative;
+  width: 100%;
+  height: min(70vh, 640px);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+}
+
+.mapCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+.layout {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2.5rem;
+}
+
+.header {
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-family: var(--font-syne, var(--font-jakarta)), sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+  color: #f0f4fc;
+}
+
+.sub {
+  margin: 0;
+  color: #8b9bb8;
+  font-size: 0.95rem;
+}
+
+.changeLocation {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #00a2f0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.changeLocation:hover {
+  color: #5eead4;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin: 1rem 0;
+  font-size: 0.82rem;
+  color: #8b9bb8;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legendDotBest {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+}
+
+.legendDotOther {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.sidebar {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 640px;
+  overflow-y: auto;
+}
+
+.listItem {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: rgba(18, 24, 38, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.listItem:hover,
+.listItemActive {
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.listItemBest {
+  border-left: 3px solid #22c55e;
+}
+
+.listName {
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin-bottom: 0.2rem;
+}
+
+.listMeta {
+  font-size: 0.78rem;
+  color: #8b9bb8;
+}
+
+.badgeBest {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #22c55e;
+  margin-bottom: 0.25rem;
+}
+
+.badgePartner {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #00a2f0;
+  margin-left: 0.35rem;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  background: #121826;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+.modal h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+}
+
+.modalClinic {
+  color: #8b9bb8;
+  font-size: 0.88rem;
+  margin: 0 0 0.75rem;
+}
+
+.modalReason {
+  font-size: 0.85rem;
+  color: #b0e5ff;
+  margin: 0 0 1rem;
+  line-height: 1.45;
+}
+
+.modalRow {
+  font-size: 0.85rem;
+  color: #8b9bb8;
+  margin-bottom: 0.35rem;
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.btnPrimary {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+}
+
+.btnSecondary {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 10px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f0f4fc;
+  text-decoration: none;
+  text-align: center;
+}
+
+.btnClose {
+  margin-top: 0.75rem;
+  width: 100%;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #8b9bb8;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.loading,
+.error {
+  padding: 2rem;
+  text-align: center;
+  color: #8b9bb8;
+}
+
+.error {
+  color: #ff6b7a;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .list {
+    max-height: none;
+  }
+}

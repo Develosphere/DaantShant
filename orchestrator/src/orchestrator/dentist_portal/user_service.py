@@ -89,12 +89,24 @@ async def register_patient(req: PatientRegisterRequest) -> TokenResponse:
 
 
 async def register_dentist(req: DentistRegisterRequest) -> TokenResponse:
-    return await _register_user(req, UserRole.DENTIST, extra={
+    extra: dict[str, Any] = {
         "degree": req.degree.strip(),
         "degree_year": req.degree_year,
         "institution": req.institution.strip(),
         "specialized_training": req.specialized_training.strip() if req.specialized_training else None,
-    })
+        "clinic_name": req.institution.strip(),
+        "is_partner": True,
+    }
+    from orchestrator.dentist_recommendation.geocoding import geocode_address
+
+    coords = await geocode_address(req.location.strip())
+    if coords:
+        lat, lng = coords
+        extra["lat"] = lat
+        extra["lng"] = lng
+        extra["coordinates"] = {"type": "Point", "coordinates": [lng, lat]}
+
+    return await _register_user(req, UserRole.DENTIST, extra=extra)
 
 
 async def register_admin(req: AdminRegisterRequest) -> TokenResponse:

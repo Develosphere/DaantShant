@@ -21,10 +21,9 @@ dependencies = [
     "bcrypt>=4.0.0",
     "pyjwt>=2.8.0",
     "email-validator>=2.0.0",
-    # Recommendation AI (LangGraph)
+    # Recommendation AI (LangGraph) — uses Gemini via TEETH_ANALYZER_GEMINI_* keys
     "langgraph>=0.2.40",
     "langchain-core>=0.3.0",
-    "openai>=1.30.0",
 ]
 
 [tool.uv.sources]

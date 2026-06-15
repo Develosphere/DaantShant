@@ -1,0 +1,179 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.7);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  background: #121826;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  overflow: visible;
+}
+
+.title {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f0f4fc;
+}
+
+.sub {
+  margin: 0 0 1.25rem;
+  font-size: 0.88rem;
+  color: #8b9bb8;
+  line-height: 1.45;
+}
+
+.label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8b9bb8;
+  margin-bottom: 0.45rem;
+}
+
+.inputRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  margin-bottom: 0.5rem;
+}
+
+.inputWrap {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.placePicker {
+  display: block;
+  width: 100%;
+  color-scheme: dark;
+  --gmpx-color-surface: #121826;
+  --gmpx-color-on-surface: #f0f4fc;
+  --gmpx-color-on-surface-variant: #8b9bb8;
+  --gmpx-color-primary: #00a2f0;
+  --gmpx-font-family-base: inherit;
+  --gmpx-font-size-base: 0.9rem;
+}
+
+.input {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #f0f4fc;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  outline: none;
+  box-sizing: border-box;
+  background-image: none !important;
+}
+
+.input:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.input:focus {
+  border-color: #00a2f0;
+  box-shadow: 0 0 0 2px rgba(0, 162, 240, 0.15);
+}
+
+.gpsBtn {
+  flex-shrink: 0;
+  width: 48px;
+  display: grid;
+  place-items: center;
+  color: #5eead4;
+  background: rgba(0, 162, 240, 0.12);
+  border: 1px solid rgba(0, 162, 240, 0.35);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.gpsSpin {
+  animation: gpsSpin 0.9s linear infinite;
+}
+
+@keyframes gpsSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.gpsBtn:hover:not(:disabled) {
+  background: rgba(0, 162, 240, 0.22);
+}
+
+.gpsBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: #5c6b85;
+  margin: 0 0 1rem;
+}
+
+.selected {
+  font-size: 0.82rem;
+  color: #22c55e;
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(34, 197, 94, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.error {
+  font-size: 0.82rem;
+  color: #ff6b7a;
+  margin: 0 0 1rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.btnPrimary {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #00a2f0, #5eead4);
+  color: #06080f;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btnGhost {
+  padding: 0.75rem 1rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #8b9bb8;
+}

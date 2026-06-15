@@ -106,7 +106,7 @@ async def generate_response_node(state: RecommendationState) -> Dict[str, Any]:
     )
     
     try:
-        response = await llm_provider.generate(
+        response = await llm_provider.gemini.generate(
             system_prompt="You are DentAssist, a friendly dental product advisor.",
             user_message=prompt,
             temperature=0.4,

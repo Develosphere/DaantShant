@@ -39,8 +39,19 @@ class MongoDBSettings(BaseSettings):
     mongodb_db: str = "dantshaant"
 
 
+class GoogleMapsSettings(BaseSettings):
+    """Google Maps / Places / Geocoding — reads GOOGLE_MAPS_API_KEY from .env"""
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    google_maps_api_key: str = ""
+
+
 # Merge MongoDB settings into main settings
-class CombinedSettings(Settings, MongoDBSettings):
+class CombinedSettings(Settings, MongoDBSettings, GoogleMapsSettings):
     pass
 
 

@@ -32,6 +32,8 @@ from orchestrator.rag_endpoints import router as rag_router
 from orchestrator.dentist_portal.routes_auth import router as portal_auth_router
 from orchestrator.dentist_portal.routes_products import router as portal_products_router
 from orchestrator.recommendation_ai_system.routes import router as recommendation_router
+from orchestrator.dentist_recommendation.routes import router as dentist_recommendation_router
+from orchestrator.dentist_recommendation.routes_geocode import router as geocode_router
 
 
 @asynccontextmanager
@@ -83,6 +85,8 @@ app.include_router(rag_router)
 app.include_router(portal_auth_router)
 app.include_router(portal_products_router)
 app.include_router(recommendation_router)
+app.include_router(dentist_recommendation_router)
+app.include_router(geocode_router)
 
 
 @app.get("/health")
