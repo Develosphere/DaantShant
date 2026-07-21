@@ -138,7 +138,7 @@ export function LandingPage() {
             ))}
           </nav>
 
-          <Link href="/scan" className={styles.navCta}>
+          <Link href="/get-started" className={styles.navCta}>
             Get Started
           </Link>
 
@@ -178,7 +178,7 @@ export function LandingPage() {
                 <br />
                 ISSUES UNTIL IT&apos;S TOO LATE.
               </p>
-              <Link href="/scan" className={styles.heroCta}>
+              <Link href="/get-started" className={styles.heroCta}>
                 <svg
                   width="24"
                   height="24"

@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
-import { PortalSectionPage } from "@/components/portal/PortalSectionPage";
+import { ProductsManager } from "@/components/dentist/ProductsManager";
 
 export const metadata: Metadata = {
   title: "Products — Dentist Portal",
 };
 
 export default function DentistProductsPage() {
-  return (
-    <PortalSectionPage
-      role="dentist"
-      title="Product catalog"
-      description="Manage your dental product listings from /dentist/products. Coming soon."
-    />
-  );
+  return <ProductsManager />;
 }

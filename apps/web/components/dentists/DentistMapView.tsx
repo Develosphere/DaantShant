@@ -57,55 +57,71 @@ export function DentistMapView() {
 
   const renderMap = useCallback(
     (center: { lat: number; lng: number }, pins: DentistPin[]) => {
-      if (!mapRef.current || !window.google?.maps) return;
-
-      if (!mapInstance.current) {
-        mapInstance.current = new google.maps.Map(mapRef.current, {
-          center,
-          zoom: 12,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: true,
-        });
-      } else {
-        mapInstance.current.setCenter(center);
+      if (!mapRef.current || !window.google?.maps) {
+        console.error("Map container or Google Maps not available");
+        return;
       }
 
-      markersRef.current.forEach((m) => m.setMap(null));
-      markersRef.current = [];
+      try {
+        if (!mapInstance.current) {
+          mapInstance.current = new google.maps.Map(mapRef.current, {
+            center,
+            zoom: 12,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true,
+            zoomControl: true,
+            styles: [
+              {
+                featureType: "poi",
+                elementType: "labels",
+                stylers: [{ visibility: "off" }],
+              },
+            ],
+          });
+          console.log("Map initialized successfully");
+        } else {
+          mapInstance.current.setCenter(center);
+        }
 
-      const patientMarker = new google.maps.Marker({
-        position: center,
-        map: mapInstance.current,
-        title: "You",
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: "#00a2f0",
-          fillOpacity: 1,
-          strokeColor: "#fff",
-          strokeWeight: 2,
-        },
-        zIndex: 1000,
-      });
-      markersRef.current.push(patientMarker);
+        markersRef.current.forEach((m) => m.setMap(null));
+        markersRef.current = [];
 
-      pins.forEach((d) => {
-        const marker = new google.maps.Marker({
-          position: { lat: d.lat, lng: d.lng },
-          map: mapInstance.current!,
-          title: d.name,
-          icon: pinIcon(d.is_best),
+        const patientMarker = new google.maps.Marker({
+          position: center,
+          map: mapInstance.current,
+          title: "You",
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: "#00a2f0",
+            fillOpacity: 1,
+            strokeColor: "#fff",
+            strokeWeight: 2,
+          },
+          zIndex: 1000,
         });
-        marker.addListener("click", () => setSelected(d));
-        markersRef.current.push(marker);
-      });
+        markersRef.current.push(patientMarker);
 
-      if (pins.length > 0) {
-        const bounds = new google.maps.LatLngBounds();
-        bounds.extend(center);
-        pins.forEach((d) => bounds.extend({ lat: d.lat, lng: d.lng }));
-        mapInstance.current.fitBounds(bounds, 48);
+        pins.forEach((d) => {
+          const marker = new google.maps.Marker({
+            position: { lat: d.lat, lng: d.lng },
+            map: mapInstance.current!,
+            title: d.name,
+            icon: pinIcon(d.is_best),
+          });
+          marker.addListener("click", () => setSelected(d));
+          markersRef.current.push(marker);
+        });
+
+        if (pins.length > 0) {
+          const bounds = new google.maps.LatLngBounds();
+          bounds.extend(center);
+          pins.forEach((d) => bounds.extend({ lat: d.lat, lng: d.lng }));
+          mapInstance.current.fitBounds(bounds, 48);
+        }
+      } catch (err) {
+        console.error("Error rendering map:", err);
       }
     },
     []
@@ -116,7 +132,9 @@ export function DentistMapView() {
       setLoading(true);
       setError("");
       try {
+        console.log("Loading Google Maps...");
         await loadGoogleMaps();
+        console.log("Google Maps loaded, fetching dentists...");
         const data = await fetchDentistRecommendations({
           issue,
           lat,
@@ -124,10 +142,13 @@ export function DentistMapView() {
           severity,
           scan_id: scanId,
         });
+        console.log("Dentists fetched:", data.dentists.length);
         setDentists(data.dentists);
         setSessionId(data.session_id);
+        console.log("Rendering map...");
         renderMap({ lat: data.patient_lat, lng: data.patient_lng }, data.dentists);
       } catch (err) {
+        console.error("Error loading recommendations:", err);
         setError(err instanceof Error ? err.message : "Could not load recommendations");
       } finally {
         setLoading(false);
@@ -198,7 +219,7 @@ export function DentistMapView() {
               className={styles.changeLocation}
               onClick={() => setLocationModalOpen(true)}
             >
-              Change location
+              📍 Change location
             </button>
           )}
           <div className={styles.legend}>
@@ -211,12 +232,44 @@ export function DentistMapView() {
           </div>
         </div>
 
-        {loading && <p className={styles.loading}>Finding dentists near you…</p>}
-        {error && <p className={styles.error}>{error}</p>}
+        {loading && (
+          <div className={styles.loadingContainer}>
+            <div className={styles.spinner} />
+            <p className={styles.loading}>Finding dentists near you…</p>
+          </div>
+        )}
 
-        {!loading && !error && hasCoords && (
+        {error && (
+          <div className={styles.errorContainer}>
+            <p className={styles.error}>⚠️ {error}</p>
+            <button
+              type="button"
+              className={styles.btnRetry}
+              onClick={() => setLocationModalOpen(true)}
+            >
+              Try different location
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && hasCoords && dentists.length === 0 && (
+          <div className={styles.emptyContainer}>
+            <p className={styles.empty}>
+              No dentists found in this area yet. Try expanding your search radius or contact
+              support.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && hasCoords && dentists.length > 0 && (
           <div className={styles.sidebar}>
             <div className={styles.mapWrap}>
+              {!mapInstance.current && (
+                <div className={styles.mapPlaceholder}>
+                  <div className={styles.mapSpinner} />
+                  <p>Loading map...</p>
+                </div>
+              )}
               <div ref={mapRef} className={styles.mapCanvas} />
             </div>
 
@@ -236,14 +289,11 @@ export function DentistMapView() {
                   )}
                   <div className={styles.listName}>{d.name}</div>
                   <div className={styles.listMeta}>
-                    {d.clinic_name || d.address} · {d.distance_km} km
+                    {d.clinic_name || d.address} · {d.distance_km.toFixed(1)} km
                     {d.rating ? ` · ★ ${d.rating}` : ""}
                   </div>
                 </button>
               ))}
-              {dentists.length === 0 && (
-                <p className={styles.loading}>No dentists found in this area yet.</p>
-              )}
             </div>
           </div>
         )}
@@ -256,7 +306,7 @@ export function DentistMapView() {
               <p className={styles.modalClinic}>{selected.clinic_name || selected.address}</p>
               <p className={styles.modalReason}>{selected.recommendation_reason}</p>
               <p className={styles.modalRow}>
-                {selected.distance_km} km away
+                {selected.distance_km.toFixed(1)} km away
                 {selected.rating ? ` · ★ ${selected.rating}` : ""}
               </p>
               {selected.address && <p className={styles.modalRow}>{selected.address}</p>}
@@ -280,7 +330,7 @@ export function DentistMapView() {
                   <span className={styles.modalRow}>Phone not available</span>
                 )}
               </div>
-              {bookMsg && <p className={styles.modalReason}>{bookMsg}</p>}
+              {bookMsg && <p className={styles.bookMessage}>{bookMsg}</p>}
               <button type="button" className={styles.btnClose} onClick={() => setSelected(null)}>
                 Close
               </button>

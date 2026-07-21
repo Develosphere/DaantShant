@@ -6,32 +6,41 @@
 }
 
 .intro {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 2.5rem;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 2px solid rgba(0, 162, 240, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 162, 240, 0.08);
 }
 
 .eyebrow {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #2ee8d4;
-  margin: 0 0 0.5rem;
+  color: #00a2f0;
+  margin: 0 0 0.65rem;
 }
 
 .title {
-  font-family: var(--font-syne, var(--font-jakarta)), sans-serif;
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  margin: 0 0 0.5rem;
-  color: #f0f4fc;
+  font-family: var(--font-anton, sans-serif);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  margin: 0 0 0.75rem;
+  color: #073564;
 }
 
 .desc {
   margin: 0;
-  color: #8b9bb8;
-  font-size: 0.95rem;
-  max-width: 560px;
+  color: #5a5a5a;
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 640px;
 }
 
 .featureGrid {
@@ -40,39 +49,49 @@
 
 .dashboardCards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-  margin-top: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
 }
 
 .card {
   display: block;
-  padding: 1.25rem;
+  padding: 2rem 1.5rem;
   text-decoration: none;
   color: inherit;
   border-radius: 16px;
-  background: rgba(18, 24, 38, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: border-color 0.2s ease, transform 0.15s ease;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(0, 162, 240, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 162, 240, 0.1);
+  transition: all 0.3s ease;
 }
 
 .card:hover {
-  border-color: rgba(46, 232, 212, 0.35);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #00a2f0;
+  transform: translateY(-8px);
+  box-shadow: 0 16px 48px rgba(0, 162, 240, 0.25);
 }
 
 .cardIcon {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
 }
 
 .cardTitle {
-  font-weight: 700;
-  margin-bottom: 0.35rem;
+  font-family: var(--font-anton, sans-serif);
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #073564;
+  margin-bottom: 0.5rem;
 }
 
 .cardDesc {
-  font-size: 0.82rem;
-  color: #8b9bb8;
+  font-size: 0.9rem;
+  color: #5a5a5a;
   margin: 0;
+  line-height: 1.5;
 }
